@@ -78,6 +78,11 @@
   border-radius: var(--radius-full);
 }
 
+/* ---- Overlay (mobile only) ---- */
+.overlay {
+  display: none;
+}
+
 /* ---- Responsive ---- */
 @media (max-width: 768px) {
   .sidebar {
@@ -90,5 +95,21 @@
 
   .open {
     transform: translateX(0);
+  }
+
+  .overlay {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: var(--bg-overlay);
+    z-index: 19;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s var(--ease);
+  }
+
+  .overlayVisible {
+    opacity: 1;
+    pointer-events: auto;
   }
 }
