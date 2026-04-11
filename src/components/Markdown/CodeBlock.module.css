@@ -1,0 +1,57 @@
+.wrapper {
+  position: relative;
+  margin: 1rem 0;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  border: 1px solid #2A2A2A;
+  background: #0D0D0D;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-2) var(--space-4);
+  background: #161616;
+  border-bottom: 1px solid #2A2A2A;
+  font-family: var(--font-mono);
+  font-size: var(--font-xs);
+  color: #8B8B8B;
+}
+
+.copyBtn {
+  padding: var(--space-1) var(--space-2);
+  border: none;
+  background: transparent;
+  color: #8B8B8B;
+  font-family: var(--font-sans);
+  font-size: var(--font-xs);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  transition: all 0.15s;
+  min-height: 1.5rem;
+}
+
+.copyBtn:hover {
+  color: #E0E0E0;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+/* Override global .msg-body pre styles within the wrapper */
+.wrapper pre {
+  margin: 0;
+  border: none;
+  border-radius: 0;
+  background: #0D0D0D;
+  padding: var(--space-4);
+  overflow-x: auto;
+}
+
+.wrapper pre code {
+  background: none;
+  padding: 0;
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  line-height: 1.6;
+  color: #E0E0E0;
+}
