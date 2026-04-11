@@ -1,6 +1,7 @@
 export interface Message {
   role: 'user' | 'assistant';
   content: string;
+  images?: string[]; // base64-encoded, no data URI prefix
 }
 
 export interface Conversation {

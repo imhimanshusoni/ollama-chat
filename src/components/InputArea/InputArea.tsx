@@ -1,28 +1,55 @@
-import { useRef, useState, useCallback, type KeyboardEvent } from 'react';
+import { useRef, useState, useCallback, type KeyboardEvent, type ClipboardEvent, type DragEvent } from 'react';
 import { useAutoResize } from '../../hooks/useAutoResize';
 import { useConnectionStore } from '../../store/connectionStore';
+import { validateImage, resizeIfNeeded, fileToBase64, fileToDataUrl } from '../../utils/imageUtils';
 import { SendButton } from './SendButton';
 import styles from './InputArea.module.css';
 
 interface Props {
-  onSend: (text: string) => void;
+  onSend: (text: string, images?: string[]) => void;
   isStreaming: boolean;
 }
 
 export function InputArea({ onSend, isStreaming }: Props) {
   const [value, setValue] = useState('');
+  const [imageBase64, setImageBase64] = useState<string | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [dragOver, setDragOver] = useState(false);
   const ref = useRef<HTMLTextAreaElement>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
   const { resize, reset } = useAutoResize(ref);
   const status = useConnectionStore((s) => s.status);
   const disabled = status !== 'connected' || isStreaming;
 
+  const attachImage = useCallback(async (file: File) => {
+    const { valid, error } = validateImage(file);
+    if (!valid) {
+      alert(error);
+      return;
+    }
+    const resized = await resizeIfNeeded(file);
+    const [base64, dataUrl] = await Promise.all([
+      fileToBase64(resized),
+      fileToDataUrl(resized),
+    ]);
+    setImageBase64(base64);
+    setImagePreview(dataUrl);
+  }, []);
+
+  const removeImage = useCallback(() => {
+    setImageBase64(null);
+    setImagePreview(null);
+    if (fileRef.current) fileRef.current.value = '';
+  }, []);
+
   const handleSend = useCallback(() => {
     const text = value.trim();
-    if (!text || disabled) return;
-    onSend(text);
+    if ((!text && !imageBase64) || disabled) return;
+    onSend(text || 'What is in this image?', imageBase64 ? [imageBase64] : undefined);
     setValue('');
+    removeImage();
     reset();
-  }, [value, disabled, onSend, reset]);
+  }, [value, imageBase64, disabled, onSend, removeImage, reset]);
 
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -31,22 +58,101 @@ export function InputArea({ onSend, isStreaming }: Props) {
     }
   }, [handleSend]);
 
+  const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) attachImage(file);
+  }, [attachImage]);
+
+  const handlePaste = useCallback((e: ClipboardEvent) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    for (const item of items) {
+      if (item.type.startsWith('image/')) {
+        e.preventDefault();
+        const file = item.getAsFile();
+        if (file) attachImage(file);
+        return;
+      }
+    }
+  }, [attachImage]);
+
+  const handleDragOver = useCallback((e: DragEvent) => {
+    e.preventDefault();
+    setDragOver(true);
+  }, []);
+
+  const handleDragLeave = useCallback(() => {
+    setDragOver(false);
+  }, []);
+
+  const handleDrop = useCallback((e: DragEvent) => {
+    e.preventDefault();
+    setDragOver(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file && file.type.startsWith('image/')) {
+      attachImage(file);
+    }
+  }, [attachImage]);
+
   return (
-    <div className={styles.area}>
-      <div className={styles.wrap}>
+    <div
+      className={styles.area}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+    >
+      {imagePreview && (
+        <div className={styles.previewRow}>
+          <div className={styles.preview}>
+            <img src={imagePreview} alt="Attached" className={styles.previewImg} />
+            <button
+              className={styles.previewRemove}
+              onClick={removeImage}
+              type="button"
+              aria-label="Remove image"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      )}
+      <div className={`${styles.wrap} ${dragOver ? styles.dragOver : ''}`}>
+        <button
+          className={styles.attachBtn}
+          onClick={() => fileRef.current?.click()}
+          type="button"
+          disabled={disabled}
+          aria-label="Attach image"
+          title="Attach image"
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
+          </svg>
+        </button>
+        <input
+          ref={fileRef}
+          type="file"
+          accept="image/*"
+          onChange={handleFileChange}
+          className={styles.fileInput}
+          tabIndex={-1}
+        />
         <textarea
           ref={ref}
           className={styles.input}
-          placeholder="Message Ollama..."
+          placeholder={imageBase64 ? 'Add a message or just send the image...' : 'Message Ollama...'}
           rows={1}
           value={value}
           onChange={(e) => { setValue(e.target.value); resize(); }}
           onKeyDown={handleKeyDown}
+          onPaste={handlePaste}
           disabled={disabled}
         />
-        <SendButton disabled={disabled || !value.trim()} onClick={handleSend} />
+        <SendButton disabled={disabled || (!value.trim() && !imageBase64)} onClick={handleSend} />
       </div>
-      <div className={styles.hint}>Enter to send &middot; Shift+Enter for new line</div>
+      <div className={styles.hint}>Enter to send &middot; Shift+Enter for new line &middot; Paste or drop images</div>
     </div>
   );
 }

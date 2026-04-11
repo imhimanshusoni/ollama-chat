@@ -73,6 +73,18 @@ function MessageInner({ message, isStreaming }: Props) {
         {isUser ? 'U' : 'AI'}
       </div>
       <div className={`${styles.body} msg-body ${isStreaming && message.content ? 'cursor-blink' : ''}`}>
+        {message.images && message.images.length > 0 && (
+          <div className={styles.msgImages}>
+            {message.images.map((img, i) => (
+              <img
+                key={i}
+                src={`data:image/png;base64,${img}`}
+                alt="Attached"
+                className={styles.msgImage}
+              />
+            ))}
+          </div>
+        )}
         {isUser ? (
           <span dangerouslySetInnerHTML={{ __html: escapeHtml(message.content).replace(/\n/g, '<br>') }} />
         ) : isWaiting ? (

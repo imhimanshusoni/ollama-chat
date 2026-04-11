@@ -108,6 +108,16 @@ export const useChatStore = create<ChatState>()(
     },
     {
       name: 'ollama-chat-store',
+      // Strip base64 images before persisting to avoid blowing localStorage limit
+      partialize: (state) => ({
+        conversations: state.conversations.map((c) => ({
+          ...c,
+          messages: c.messages.map((m) =>
+            m.images ? { ...m, images: undefined } : m
+          ),
+        })),
+        activeId: state.activeId,
+      }),
     }
   )
 );

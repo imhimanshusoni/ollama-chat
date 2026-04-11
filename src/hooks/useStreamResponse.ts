@@ -8,14 +8,14 @@ export function useStreamResponse() {
   const controllerRef = useRef<AbortController | null>(null);
   const accumulatedRef = useRef('');
 
-  const send = useCallback(async (text: string) => {
+  const send = useCallback(async (text: string, images?: string[]) => {
     const { activeId, addMessage, updateLastMessage, setTitle } = useChatStore.getState();
     const { baseUrl, currentModel } = useConnectionStore.getState();
 
     if (!activeId || !baseUrl || !currentModel) return;
 
-    // Add user message
-    addMessage(activeId, { role: 'user', content: text });
+    // Add user message (with optional images)
+    addMessage(activeId, { role: 'user', content: text, ...(images ? { images } : {}) });
 
     // Set title from first message if empty
     const conversation = useChatStore.getState().conversations.find(c => c.id === activeId);
