@@ -1,7 +1,7 @@
 import { useRef, useState, useCallback, type KeyboardEvent, type ClipboardEvent, type DragEvent } from 'react';
 import { useAutoResize } from '../../hooks/useAutoResize';
 import { useConnectionStore } from '../../store/connectionStore';
-import { validateImage, resizeIfNeeded, fileToBase64, fileToDataUrl } from '../../utils/imageUtils';
+import { validateImage, prepareImage, fileToBase64, fileToDataUrl } from '../../utils/imageUtils';
 import { SendButton } from './SendButton';
 import styles from './InputArea.module.css';
 
@@ -27,10 +27,11 @@ export function InputArea({ onSend, isStreaming }: Props) {
       alert(error);
       return;
     }
-    const resized = await resizeIfNeeded(file);
+    // Converts HEIC to JPEG + resizes if needed
+    const prepared = await prepareImage(file);
     const [base64, dataUrl] = await Promise.all([
-      fileToBase64(resized),
-      fileToDataUrl(resized),
+      fileToBase64(prepared),
+      fileToDataUrl(prepared),
     ]);
     setImageBase64(base64);
     setImagePreview(dataUrl);
@@ -134,7 +135,7 @@ export function InputArea({ onSend, isStreaming }: Props) {
         <input
           ref={fileRef}
           type="file"
-          accept="image/*"
+          accept="image/*,.heic,.heif"
           onChange={handleFileChange}
           className={styles.fileInput}
           tabIndex={-1}

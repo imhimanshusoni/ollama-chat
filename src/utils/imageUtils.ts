@@ -1,10 +1,28 @@
+import heic2any from 'heic2any';
+
 const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB
 const MAX_DIMENSION = 1024;
 const ALLOWED_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/gif'];
+const HEIC_TYPES = ['image/heic', 'image/heif'];
+
+function isHeic(file: File): boolean {
+  if (HEIC_TYPES.includes(file.type)) return true;
+  // Some browsers don't set the MIME type for HEIC, check extension
+  const ext = file.name.toLowerCase().split('.').pop();
+  return ext === 'heic' || ext === 'heif';
+}
+
+export async function convertHeicToJpeg(file: File): Promise<File> {
+  const blob = await heic2any({ blob: file, toType: 'image/jpeg', quality: 0.9 });
+  const resultBlob = Array.isArray(blob) ? blob[0] : blob;
+  const name = file.name.replace(/\.(heic|heif)$/i, '.jpg');
+  return new File([resultBlob], name, { type: 'image/jpeg' });
+}
 
 export function validateImage(file: File): { valid: boolean; error?: string } {
-  if (!ALLOWED_TYPES.includes(file.type)) {
-    return { valid: false, error: `Unsupported format. Use PNG, JPEG, WebP, or GIF.` };
+  const type = file.type;
+  if (!ALLOWED_TYPES.includes(type) && !isHeic(file)) {
+    return { valid: false, error: `Unsupported format. Use PNG, JPEG, WebP, GIF, or HEIC.` };
   }
   if (file.size > MAX_FILE_SIZE) {
     return { valid: false, error: `Image too large (${(file.size / 1024 / 1024).toFixed(1)}MB). Max 20MB.` };
@@ -12,12 +30,19 @@ export function validateImage(file: File): { valid: boolean; error?: string } {
   return { valid: true };
 }
 
+export async function prepareImage(file: File): Promise<File> {
+  // Convert HEIC to JPEG first
+  let prepared = isHeic(file) ? await convertHeicToJpeg(file) : file;
+  // Then resize if needed
+  prepared = await resizeIfNeeded(prepared);
+  return prepared;
+}
+
 export function fileToBase64(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => {
       const result = reader.result as string;
-      // Strip the data URI prefix: "data:image/png;base64," -> raw base64
       const base64 = result.split(',')[1];
       resolve(base64);
     };
