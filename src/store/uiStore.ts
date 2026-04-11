@@ -39,7 +39,7 @@ export const useUiStore = create<UiState>()(
 
       return {
         theme: initialTheme,
-        sidebarOpen: true,
+        sidebarOpen: typeof window !== 'undefined' ? window.innerWidth > 768 : true,
         settingsOpen: false,
 
         toggleTheme: () =>
