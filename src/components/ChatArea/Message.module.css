@@ -58,7 +58,9 @@
   font-size: var(--font-base);
   color: var(--text-1);
   min-width: 0;
+  max-width: 100%;
   overflow-wrap: break-word;
+  overflow-x: hidden;
 }
 
 /* --- Copy button --- */

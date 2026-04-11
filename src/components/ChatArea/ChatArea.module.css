@@ -1,6 +1,7 @@
 .area {
   flex: 1;
   overflow-y: auto;
+  overflow-x: hidden;
   padding: var(--space-8) var(--space-6) var(--space-4);
   position: relative;
 }

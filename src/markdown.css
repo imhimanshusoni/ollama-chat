@@ -157,6 +157,9 @@
   width: 100%;
   font-size: var(--font-sm);
   line-height: 1.5;
+  display: block;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .msg-body th,
