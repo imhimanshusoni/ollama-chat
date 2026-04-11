@@ -1,4 +1,4 @@
-import { memo, useState, useCallback } from 'react';
+import { memo, useState, useCallback, useEffect, useRef } from 'react';
 import type { Message as MessageType } from '../../types';
 import { MarkdownRenderer } from '../Markdown/MarkdownRenderer';
 import { escapeHtml } from '../../utils/escapeHtml';
@@ -41,8 +41,30 @@ function CopyButton({ content }: { content: string }) {
   );
 }
 
+function ThinkingIndicator() {
+  const [elapsed, setElapsed] = useState(0);
+  const startRef = useRef(Date.now());
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setElapsed(Math.floor((Date.now() - startRef.current) / 1000));
+    }, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <span className={styles.thinking}>
+      <span className={styles.thinkingDot} />
+      <span className={styles.thinkingText}>
+        Thinking{elapsed > 0 ? `... ${elapsed}s` : '...'}
+      </span>
+    </span>
+  );
+}
+
 function MessageInner({ message, isStreaming }: Props) {
   const isUser = message.role === 'user';
+  const isWaiting = isStreaming && !message.content;
   const showCopy = !isUser && !isStreaming && message.content;
 
   return (
@@ -50,11 +72,13 @@ function MessageInner({ message, isStreaming }: Props) {
       <div className={`${styles.avatar} ${isUser ? styles.avatarUser : styles.avatarAssistant}`}>
         {isUser ? 'U' : 'AI'}
       </div>
-      <div className={`${styles.body} msg-body ${isStreaming ? 'cursor-blink' : ''}`}>
+      <div className={`${styles.body} msg-body ${isStreaming && message.content ? 'cursor-blink' : ''}`}>
         {isUser ? (
           <span dangerouslySetInnerHTML={{ __html: escapeHtml(message.content).replace(/\n/g, '<br>') }} />
+        ) : isWaiting ? (
+          <ThinkingIndicator />
         ) : (
-          <MarkdownRenderer content={message.content || '*Thinking...*'} />
+          <MarkdownRenderer content={message.content} />
         )}
         {showCopy && <CopyButton content={message.content} />}
       </div>
