@@ -1,1 +1,1 @@
-http://localhost:11434
+https://miss-forge-ball-traveler.trycloudflare.com
