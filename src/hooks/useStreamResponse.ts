@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback } from 'react';
-import { streamChat } from '../services/ollama';
+import { streamChatWithTools } from '../services/ollamaTools';
 import { useChatStore } from '../store/chatStore';
 import { useConnectionStore } from '../store/connectionStore';
 
@@ -40,9 +40,14 @@ export function useStreamResponse() {
       // Exclude the empty assistant message we just added
       const messagesToSend = messages.slice(0, -1);
 
-      for await (const token of streamChat(baseUrl, currentModel, messagesToSend, controller.signal)) {
-        accumulatedRef.current += token;
-        updateLastMessage(activeId, accumulatedRef.current);
+      for await (const ev of streamChatWithTools(baseUrl, currentModel, messagesToSend, controller.signal)) {
+        if (ev.type === 'reset') {
+          accumulatedRef.current = '';
+          updateLastMessage(activeId, '');
+        } else {
+          accumulatedRef.current += ev.value;
+          updateLastMessage(activeId, accumulatedRef.current);
+        }
       }
     } catch (err: unknown) {
       if (err instanceof Error && err.name !== 'AbortError') {

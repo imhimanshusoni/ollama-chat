@@ -19,7 +19,9 @@ export function InputArea({ onSend, isStreaming }: Props) {
   const fileRef = useRef<HTMLInputElement>(null);
   const { resize, reset } = useAutoResize(ref);
   const status = useConnectionStore((s) => s.status);
-  const disabled = status !== 'connected' || isStreaming;
+  // Textarea/attach are only disabled when not connected — they stay usable
+  // while a response streams. Only the send button is disabled mid-stream.
+  const notConnected = status !== 'connected';
 
   const attachImage = useCallback(async (file: File) => {
     const { valid, error } = validateImage(file);
@@ -45,12 +47,12 @@ export function InputArea({ onSend, isStreaming }: Props) {
 
   const handleSend = useCallback(() => {
     const text = value.trim();
-    if ((!text && !imageBase64) || disabled) return;
+    if ((!text && !imageBase64) || notConnected || isStreaming) return;
     onSend(text || 'What is in this image?', imageBase64 ? [imageBase64] : undefined);
     setValue('');
     removeImage();
     reset();
-  }, [value, imageBase64, disabled, onSend, removeImage, reset]);
+  }, [value, imageBase64, notConnected, isStreaming, onSend, removeImage, reset]);
 
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -124,7 +126,7 @@ export function InputArea({ onSend, isStreaming }: Props) {
           className={styles.attachBtn}
           onClick={() => fileRef.current?.click()}
           type="button"
-          disabled={disabled}
+          disabled={notConnected}
           aria-label="Attach image"
           title="Attach image"
         >
@@ -149,9 +151,9 @@ export function InputArea({ onSend, isStreaming }: Props) {
           onChange={(e) => { setValue(e.target.value); resize(); }}
           onKeyDown={handleKeyDown}
           onPaste={handlePaste}
-          disabled={disabled}
+          disabled={notConnected}
         />
-        <SendButton disabled={disabled || (!value.trim() && !imageBase64)} onClick={handleSend} />
+        <SendButton disabled={notConnected || isStreaming || (!value.trim() && !imageBase64)} onClick={handleSend} />
       </div>
       <div className={styles.hint}>Enter to send &middot; Shift+Enter for new line &middot; Paste or drop images</div>
     </div>

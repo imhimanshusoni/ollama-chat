@@ -1,3 +1,10 @@
+import type {
+  OllamaChatChunk,
+  OllamaMessage,
+  OllamaTool,
+  OllamaToolCall,
+} from '../types';
+
 export async function fetchModels(baseUrl: string): Promise<string[]> {
   const resp = await fetch(baseUrl + '/api/tags');
   if (!resp.ok) throw new Error('HTTP ' + resp.status);
@@ -5,16 +12,28 @@ export async function fetchModels(baseUrl: string): Promise<string[]> {
   return (data.models || []).map((m: { name: string }) => m.name);
 }
 
-export async function* streamChat(
+/**
+ * Low-level streaming reader for /api/chat. Parses the NDJSON stream and yields
+ * structured chunks carrying content deltas and/or tool_calls. Pass an empty
+ * `tools` array for a plain (tool-less) chat request — the field is omitted from
+ * the body in that case.
+ */
+export async function* streamChatRaw(
   baseUrl: string,
   model: string,
-  messages: { role: string; content: string }[],
+  messages: OllamaMessage[],
+  tools: OllamaTool[],
   signal: AbortSignal
-): AsyncGenerator<string> {
+): AsyncGenerator<{ content?: string; toolCalls?: OllamaToolCall[]; done?: boolean }> {
   const resp = await fetch(baseUrl + '/api/chat', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ model, messages, stream: true }),
+    body: JSON.stringify({
+      model,
+      messages,
+      stream: true,
+      ...(tools.length ? { tools } : {}),
+    }),
     signal,
   });
 
@@ -24,6 +43,21 @@ export async function* streamChat(
   const decoder = new TextDecoder();
   let buffer = '';
 
+  const emit = function* (line: string) {
+    if (!line.trim()) return;
+    let j: OllamaChatChunk;
+    try {
+      j = JSON.parse(line);
+    } catch {
+      return; // skip malformed lines
+    }
+    const content = j.message?.content;
+    const toolCalls = j.message?.tool_calls;
+    if (content || (toolCalls && toolCalls.length) || j.done) {
+      yield { content, toolCalls, done: j.done };
+    }
+  };
+
   while (true) {
     const { done, value } = await reader.read();
     if (done) break;
@@ -31,26 +65,11 @@ export async function* streamChat(
     const lines = buffer.split('\n');
     buffer = lines.pop()!;
     for (const line of lines) {
-      if (!line.trim()) continue;
-      try {
-        const j = JSON.parse(line);
-        if (j.message && j.message.content) {
-          yield j.message.content;
-        }
-      } catch {
-        // skip malformed lines
-      }
+      yield* emit(line);
     }
   }
 
   if (buffer.trim()) {
-    try {
-      const j = JSON.parse(buffer);
-      if (j.message && j.message.content) {
-        yield j.message.content;
-      }
-    } catch {
-      // skip malformed trailing data
-    }
+    yield* emit(buffer);
   }
 }
