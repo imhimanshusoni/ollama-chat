@@ -47,7 +47,7 @@ export interface OllamaToolCall {
 }
 
 export interface OllamaMessage {
-  role: 'user' | 'assistant' | 'tool';
+  role: 'system' | 'user' | 'assistant' | 'tool';
   content: string;
   images?: string[];
   tool_calls?: OllamaToolCall[];

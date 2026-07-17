@@ -1,4 +1,5 @@
 import { streamChatRaw } from './ollama';
+import { buildSystemPrompt } from './prompts';
 import type {
   Message,
   OllamaMessage,
@@ -204,10 +205,18 @@ export async function* streamChatWithTools(
   model: string,
   messages: Message[],
   think: boolean,
-  signal: AbortSignal
+  signal: AbortSignal,
+  opts?: { systemPromptOverride?: string }
 ): AsyncGenerator<ToolStreamEvent> {
-  const working: OllamaMessage[] = messages.map(toOllamaMessage);
   let toolsDisabled = toolUnsupportedModels.has(model);
+  const systemMessage = (toolsEnabled: boolean): OllamaMessage => ({
+    role: 'system',
+    content: buildSystemPrompt(opts?.systemPromptOverride ?? '', toolsEnabled),
+  });
+  const working: OllamaMessage[] = [
+    systemMessage(!toolsDisabled),
+    ...messages.map(toOllamaMessage),
+  ];
 
   for (let iter = 0; iter < MAX_TOOL_ITERATIONS; iter++) {
     if (signal.aborted) return;
@@ -252,6 +261,9 @@ export async function* streamChatWithTools(
         console.warn('[tools] server rejected tools, retrying without them:', model, (err as Error).message);
         toolUnsupportedModels.add(model);
         toolsDisabled = true;
+        // Rebuild the system message so the retry doesn't promise tools it
+        // no longer has.
+        working[0] = systemMessage(false);
         iter = -1; // loop will ++ back to 0
         continue;
       }

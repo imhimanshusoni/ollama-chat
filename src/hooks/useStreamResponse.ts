@@ -3,6 +3,7 @@ import { streamChatWithTools } from '../services/ollamaTools';
 import { generateChatTitle } from '../services/titleGenerator';
 import { useChatStore } from '../store/chatStore';
 import { useConnectionStore } from '../store/connectionStore';
+import { useSettingsStore } from '../store/settingsStore';
 
 // After the first exchange completes, summarize it into a real title in the
 // background. Fire-and-forget: on any failure the truncated-first-message
@@ -76,7 +77,11 @@ export function useStreamResponse() {
       // Exclude the empty assistant message we just added
       const messagesToSend = messages.slice(0, -1);
 
-      for await (const ev of streamChatWithTools(baseUrl, currentModel, messagesToSend, reasoning, controller.signal)) {
+      const { systemPromptOverride } = useSettingsStore.getState();
+
+      for await (const ev of streamChatWithTools(baseUrl, currentModel, messagesToSend, reasoning, controller.signal, {
+        systemPromptOverride,
+      })) {
         if (ev.type === 'reset') {
           accumulatedRef.current = '';
           updateLastMessage(activeId, '');

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useConnectionStore } from '../../store/connectionStore';
+import { useSettingsStore } from '../../store/settingsStore';
 import { useUiStore } from '../../store/uiStore';
 import { fetchModels, warmModel } from '../../services/ollama';
 import { fetchRemoteModelUrl } from '../../services/remoteConfig';
@@ -21,6 +22,8 @@ export function SettingsPanel() {
     setStatus,
     clearManualOverride,
   } = useConnectionStore();
+  const systemPromptOverride = useSettingsStore((s) => s.systemPromptOverride);
+  const setSystemPromptOverride = useSettingsStore((s) => s.setSystemPromptOverride);
   const [urlValue, setUrlValue] = useState(baseUrl);
   const [connectText, setConnectText] = useState('Connect');
   const [syncing, setSyncing] = useState(false);
@@ -135,6 +138,21 @@ export function SettingsPanel() {
             Pick your model and toggle reasoning from the controls next to the message box.
           </p>
         )}
+        <div className={styles.fieldGroup}>
+          <label className={styles.fieldLabel} htmlFor="settings-system-prompt">System prompt</label>
+          <textarea
+            className={`${styles.fieldInput} ${styles.fieldTextarea}`}
+            id="settings-system-prompt"
+            value={systemPromptOverride}
+            onChange={(e) => setSystemPromptOverride(e.target.value)}
+            placeholder="Leave empty to use the default"
+            rows={4}
+            spellCheck={false}
+          />
+          <p className={styles.fieldHint}>
+            Sets the assistant's behavior for every chat. Tool instructions are added automatically.
+          </p>
+        </div>
       </div>
     </div>
   );
