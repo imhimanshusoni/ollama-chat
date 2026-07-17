@@ -133,6 +133,57 @@ function toOllamaMessage(m: Message): OllamaMessage {
   };
 }
 
+// How many recent tool-bearing assistant turns are replayed in full
+// (tool_calls + tool results). Older ones collapse to a one-line note so the
+// model stays aware it already searched without paying the token cost.
+const FULL_TOOL_TURNS = 2;
+const TOOL_RESULT_CAP = 1500;
+
+/**
+ * Rebuilds the wire-format history from persisted messages. Previously tool
+ * rounds lived only in the transient `working` array, so on the next turn the
+ * model had no record it ever called a tool (and would deny having searched).
+ * A persisted assistant message with toolCalls now expands back into the
+ * assistant(tool_calls) → tool → assistant(text) sequence Ollama expects.
+ */
+export function buildOllamaHistory(messages: Message[]): OllamaMessage[] {
+  const toolTurnIndices = messages
+    .map((m, i) => (m.role === 'assistant' && m.toolCalls?.length ? i : -1))
+    .filter((i) => i !== -1);
+  const expandSet = new Set(toolTurnIndices.slice(-FULL_TOOL_TURNS));
+
+  const out: OllamaMessage[] = [];
+  messages.forEach((m, i) => {
+    const calls = m.role === 'assistant' ? m.toolCalls : undefined;
+    if (!calls || calls.length === 0) {
+      out.push(toOllamaMessage(m));
+      return;
+    }
+    if (expandSet.has(i)) {
+      out.push({
+        role: 'assistant',
+        content: '',
+        tool_calls: calls.map((c) => ({ function: { name: c.name, arguments: c.arguments } })),
+      });
+      for (const c of calls) {
+        const result = c.result ?? '(cancelled — no result)';
+        out.push({
+          role: 'tool',
+          tool_name: c.name,
+          content: result.length > TOOL_RESULT_CAP ? result.slice(0, TOOL_RESULT_CAP) + '…' : result,
+        });
+      }
+      if (m.content) out.push({ role: 'assistant', content: m.content });
+    } else {
+      const notes = calls
+        .map((c) => `[Earlier, used ${c.name}(${JSON.stringify(c.arguments)})]`)
+        .join(' ');
+      out.push({ role: 'assistant', content: `${notes}\n${m.content}`.trim() });
+    }
+  });
+  return out;
+}
+
 export async function* streamChatWithTools(
   baseUrl: string,
   model: string,
@@ -149,7 +200,7 @@ export async function* streamChatWithTools(
   });
   const working: OllamaMessage[] = [
     systemMessage(!toolsDisabled),
-    ...messages.map(toOllamaMessage),
+    ...buildOllamaHistory(messages),
   ];
 
   for (let iter = 0; iter < MAX_TOOL_ITERATIONS; iter++) {
