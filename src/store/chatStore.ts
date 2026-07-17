@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { Conversation, Message, ToolInvocation } from '../types';
+import type { Conversation, Message, TokenStats, ToolInvocation } from '../types';
+import { generateId } from '../utils/generateId';
 
 interface ChatState {
   conversations: Conversation[];
@@ -15,10 +16,9 @@ interface ChatState {
   setToolResult: (id: string, name: string, result: string) => void;
   setTitle: (id: string, title: string) => void;
   setReasoning: (id: string, reasoning: boolean) => void;
-}
-
-function generateId(): string {
-  return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+  setTokenStats: (id: string, stats: TokenStats) => void;
+  setLastMessageError: (id: string, error: string) => void;
+  removeLastMessageIfEmptyAssistant: (id: string) => void;
 }
 
 function migrateOldData(): { conversations: Conversation[]; activeId: string | null } | null {
@@ -170,6 +170,46 @@ export const useChatStore = create<ChatState>()(
             conversations: state.conversations.map((c) =>
               c.id === id ? { ...c, reasoning } : c
             ),
+          }));
+        },
+
+        setTokenStats: (id, stats) => {
+          set((state) => ({
+            conversations: state.conversations.map((c) =>
+              c.id === id ? { ...c, lastTokenStats: stats } : c
+            ),
+          }));
+        },
+
+        setLastMessageError: (id, error) => {
+          set((state) => ({
+            conversations: state.conversations.map((c) => {
+              if (c.id !== id || c.messages.length === 0) return c;
+              const messages = [...c.messages];
+              messages[messages.length - 1] = {
+                ...messages[messages.length - 1],
+                error,
+              };
+              return { ...c, messages };
+            }),
+          }));
+        },
+
+        // Drops the trailing assistant placeholder if the stream was aborted
+        // before it received any content, so an empty bubble isn't persisted.
+        removeLastMessageIfEmptyAssistant: (id) => {
+          set((state) => ({
+            conversations: state.conversations.map((c) => {
+              if (c.id !== id || c.messages.length === 0) return c;
+              const last = c.messages[c.messages.length - 1];
+              const isEmpty =
+                last.role === 'assistant' &&
+                !last.content &&
+                !last.thinking &&
+                !(last.toolCalls && last.toolCalls.length);
+              if (!isEmpty) return c;
+              return { ...c, messages: c.messages.slice(0, -1) };
+            }),
           }));
         },
       };

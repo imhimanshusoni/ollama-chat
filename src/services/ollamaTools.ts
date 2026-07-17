@@ -217,6 +217,9 @@ export async function* streamChatWithTools(
     let content = '';
     const toolCalls: OllamaToolCall[] = [];
     let receivedChunk = false;
+    // Token counts arrive on the round's done chunk, but whether the round is
+    // final is only known afterwards (no tool_calls) — buffer, emit at return.
+    let stats: { promptEvalCount: number; evalCount: number } | null = null;
 
     try {
       for await (const chunk of streamChatRaw(baseUrl, model, working, activeTools, think, signal)) {
@@ -230,6 +233,9 @@ export async function* streamChatWithTools(
         }
         if (chunk.toolCalls && chunk.toolCalls.length) {
           toolCalls.push(...chunk.toolCalls);
+        }
+        if (chunk.done && chunk.promptEvalCount !== undefined && chunk.evalCount !== undefined) {
+          stats = { promptEvalCount: chunk.promptEvalCount, evalCount: chunk.evalCount };
         }
       }
     } catch (err) {
@@ -259,7 +265,10 @@ export async function* streamChatWithTools(
     });
 
     // No tool calls → this was the final answer (already streamed live).
-    if (toolCalls.length === 0) return;
+    if (toolCalls.length === 0) {
+      if (stats) yield { type: 'stats', ...stats };
+      return;
+    }
 
     console.log('[tools] tool_calls:', toolCalls);
     for (const call of toolCalls) {
@@ -278,5 +287,8 @@ export async function* streamChatWithTools(
   for await (const chunk of streamChatRaw(baseUrl, model, working, [], think, signal)) {
     if (chunk.thinking) yield { type: 'thinking', value: chunk.thinking };
     if (chunk.content) yield { type: 'delta', value: chunk.content };
+    if (chunk.done && chunk.promptEvalCount !== undefined && chunk.evalCount !== undefined) {
+      yield { type: 'stats', promptEvalCount: chunk.promptEvalCount, evalCount: chunk.evalCount };
+    }
   }
 }

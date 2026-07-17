@@ -182,6 +182,9 @@ function MessageInner({ message, isStreaming }: Props) {
         ) : (
           <MarkdownRenderer content={message.content} />
         )}
+        {!isUser && message.error && !isStreaming && (
+          <div className={styles.msgError}>Request failed: {message.error}</div>
+        )}
         {showCopy && <CopyButton content={message.content} />}
       </div>
     </div>

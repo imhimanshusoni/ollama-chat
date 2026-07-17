@@ -16,7 +16,7 @@ const KEEP_ALIVE = -1;
 // generate, so replies stop early with done_reason "length" (mid-sentence
 // cut-offs). Raising this gives long chats room for both history and answer.
 // gemma supports far larger; 8192 is a safe balance against Colab VRAM.
-const NUM_CTX = 8192;
+export const NUM_CTX = 8192;
 
 export async function fetchModels(baseUrl: string): Promise<string[]> {
   const resp = await fetch(baseUrl + '/api/tags');
@@ -47,6 +47,43 @@ export async function warmModel(baseUrl: string, model: string): Promise<void> {
 }
 
 /**
+ * One-shot, non-streaming /api/chat call for background meta tasks (title
+ * generation, history summarization). Sends the same keep_alive and num_ctx as
+ * the chat requests — a different num_ctx would force Ollama to reload the
+ * model (see warmModel). Never includes tools and never thinks.
+ */
+export async function generateOnce(
+  baseUrl: string,
+  model: string,
+  messages: OllamaMessage[],
+  opts?: { numPredict?: number; signal?: AbortSignal }
+): Promise<{ content: string; promptEvalCount?: number; evalCount?: number }> {
+  const resp = await fetch(baseUrl + '/api/chat', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model,
+      messages,
+      stream: false,
+      think: false,
+      keep_alive: KEEP_ALIVE,
+      options: {
+        num_ctx: NUM_CTX,
+        ...(opts?.numPredict ? { num_predict: opts.numPredict } : {}),
+      },
+    }),
+    signal: opts?.signal,
+  });
+  if (!resp.ok) throw new Error('HTTP ' + resp.status);
+  const data: OllamaChatChunk = await resp.json();
+  return {
+    content: data.message?.content ?? '',
+    promptEvalCount: data.prompt_eval_count,
+    evalCount: data.eval_count,
+  };
+}
+
+/**
  * Low-level streaming reader for /api/chat. Parses the NDJSON stream and yields
  * structured chunks carrying content deltas and/or tool_calls. Pass an empty
  * `tools` array for a plain (tool-less) chat request — the field is omitted from
@@ -59,7 +96,15 @@ export async function* streamChatRaw(
   tools: OllamaTool[],
   think: boolean,
   signal: AbortSignal
-): AsyncGenerator<{ content?: string; thinking?: string; toolCalls?: OllamaToolCall[]; done?: boolean }> {
+): AsyncGenerator<{
+  content?: string;
+  thinking?: string;
+  toolCalls?: OllamaToolCall[];
+  done?: boolean;
+  doneReason?: string;
+  promptEvalCount?: number;
+  evalCount?: number;
+}> {
   const resp = await fetch(baseUrl + '/api/chat', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -96,7 +141,15 @@ export async function* streamChatRaw(
     const thinking = j.message?.thinking;
     const toolCalls = j.message?.tool_calls;
     if (content || thinking || (toolCalls && toolCalls.length) || j.done) {
-      yield { content, thinking, toolCalls, done: j.done };
+      yield {
+        content,
+        thinking,
+        toolCalls,
+        done: j.done,
+        doneReason: j.done_reason,
+        promptEvalCount: j.prompt_eval_count,
+        evalCount: j.eval_count,
+      };
     }
   };
 

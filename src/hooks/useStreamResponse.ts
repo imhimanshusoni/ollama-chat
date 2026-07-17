@@ -9,8 +9,19 @@ export function useStreamResponse() {
   const accumulatedRef = useRef('');
 
   const send = useCallback(async (text: string, images?: string[]) => {
-    const { activeId, conversations, addMessage, updateLastMessage, appendThinking, addToolCall, setToolResult, setTitle } =
-      useChatStore.getState();
+    const {
+      activeId,
+      conversations,
+      addMessage,
+      updateLastMessage,
+      appendThinking,
+      addToolCall,
+      setToolResult,
+      setTitle,
+      setTokenStats,
+      setLastMessageError,
+      removeLastMessageIfEmptyAssistant,
+    } = useChatStore.getState();
     const { baseUrl, currentModel } = useConnectionStore.getState();
 
     if (!activeId || !baseUrl || !currentModel) return;
@@ -54,15 +65,28 @@ export function useStreamResponse() {
           addToolCall(activeId, { name: ev.name, arguments: ev.arguments });
         } else if (ev.type === 'tool_result') {
           setToolResult(activeId, ev.name, ev.result);
+        } else if (ev.type === 'stats') {
+          const msgCount = useChatStore.getState().conversations
+            .find(c => c.id === activeId)?.messages.length ?? 0;
+          setTokenStats(activeId, {
+            promptEvalCount: ev.promptEvalCount,
+            evalCount: ev.evalCount,
+            atMessageCount: msgCount,
+          });
         } else {
           accumulatedRef.current += ev.value;
           updateLastMessage(activeId, accumulatedRef.current);
         }
       }
     } catch (err: unknown) {
-      if (err instanceof Error && err.name !== 'AbortError') {
+      if (err instanceof Error && err.name === 'AbortError') {
+        // Aborted before any token arrived → drop the empty placeholder so it
+        // isn't persisted (and later sent to the model as an empty turn).
+        removeLastMessageIfEmptyAssistant(activeId);
+      } else if (err instanceof Error) {
         const fallback = accumulatedRef.current || '*Could not get a response.*';
         updateLastMessage(activeId, fallback);
+        setLastMessageError(activeId, err.message);
       }
     } finally {
       setIsStreaming(false);

@@ -12,6 +12,16 @@ export interface Message {
   images?: string[]; // base64-encoded, no data URI prefix
   toolCalls?: ToolInvocation[];
   thinking?: string; // reasoning trace, populated only when reasoning is enabled
+  error?: string; // stream failure shown inline under the message
+}
+
+// Ollama's token counts from the last completed response. `atMessageCount`
+// records messages.length at the time, so the counts are known to cover
+// exactly that prefix of the conversation (messages are append-only).
+export interface TokenStats {
+  promptEvalCount: number;
+  evalCount: number;
+  atMessageCount: number;
 }
 
 export interface Conversation {
@@ -20,6 +30,8 @@ export interface Conversation {
   messages: Message[];
   created: number;
   reasoning?: boolean; // per-chat reasoning setting (defaults off)
+  titleGenerated?: boolean; // an LLM-summarized title has been set (never re-title)
+  lastTokenStats?: TokenStats;
 }
 
 export type ConnectionStatus = 'idle' | 'connecting' | 'connected' | 'error';
@@ -54,6 +66,9 @@ export interface OllamaTool {
 export interface OllamaChatChunk {
   message?: { content?: string; thinking?: string; tool_calls?: OllamaToolCall[] };
   done?: boolean;
+  done_reason?: string;
+  prompt_eval_count?: number;
+  eval_count?: number;
 }
 
 // Events emitted by the tool-calling orchestrator to the streaming hook.
@@ -64,4 +79,5 @@ export type ToolStreamEvent =
   | { type: 'reset' }
   | { type: 'thinking'; value: string }
   | { type: 'tool_call'; name: string; arguments: Record<string, unknown> }
-  | { type: 'tool_result'; name: string; result: string };
+  | { type: 'tool_result'; name: string; result: string }
+  | { type: 'stats'; promptEvalCount: number; evalCount: number };
