@@ -14,7 +14,7 @@ interface ChatState {
   appendThinking: (id: string, delta: string) => void;
   addToolCall: (id: string, invocation: ToolInvocation) => void;
   setToolResult: (id: string, name: string, result: string) => void;
-  setTitle: (id: string, title: string) => void;
+  setTitle: (id: string, title: string, opts?: { generated?: boolean }) => void;
   setReasoning: (id: string, reasoning: boolean) => void;
   setTokenStats: (id: string, stats: TokenStats) => void;
   setLastMessageError: (id: string, error: string) => void;
@@ -157,11 +157,18 @@ export const useChatStore = create<ChatState>()(
           }));
         },
 
-        setTitle: (id, title) => {
+        setTitle: (id, title, opts) => {
           set((state) => ({
-            conversations: state.conversations.map((c) =>
-              c.id === id ? { ...c, title } : c
-            ),
+            conversations: state.conversations.map((c) => {
+              if (c.id !== id) return c;
+              // A generated title is written at most once per conversation.
+              if (opts?.generated && c.titleGenerated) return c;
+              return {
+                ...c,
+                title,
+                ...(opts?.generated ? { titleGenerated: true } : {}),
+              };
+            }),
           }));
         },
 

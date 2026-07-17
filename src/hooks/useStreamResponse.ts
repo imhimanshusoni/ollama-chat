@@ -1,7 +1,27 @@
 import { useState, useRef, useCallback } from 'react';
 import { streamChatWithTools } from '../services/ollamaTools';
+import { generateChatTitle } from '../services/titleGenerator';
 import { useChatStore } from '../store/chatStore';
 import { useConnectionStore } from '../store/connectionStore';
+
+// After the first exchange completes, summarize it into a real title in the
+// background. Fire-and-forget: on any failure the truncated-first-message
+// fallback title simply stays.
+function maybeGenerateTitle(chatId: string, baseUrl: string, model: string) {
+  const conv = useChatStore.getState().conversations.find((c) => c.id === chatId);
+  if (!conv || conv.titleGenerated || conv.messages.length !== 2) return;
+  const [userMsg, assistantMsg] = conv.messages;
+  if (assistantMsg.role !== 'assistant' || !assistantMsg.content) return;
+
+  const titleAtSend = conv.title;
+  void generateChatTitle(baseUrl, model, userMsg.content, assistantMsg.content).then((title) => {
+    if (!title) return;
+    const now = useChatStore.getState().conversations.find((c) => c.id === chatId);
+    // Skip if the chat is gone, already titled, or the title changed meanwhile.
+    if (!now || now.titleGenerated || now.title !== titleAtSend) return;
+    useChatStore.getState().setTitle(chatId, title, { generated: true });
+  });
+}
 
 export function useStreamResponse() {
   const [isStreaming, setIsStreaming] = useState(false);
@@ -48,6 +68,7 @@ export function useStreamResponse() {
     accumulatedRef.current = '';
     setIsStreaming(true);
 
+    let completed = false;
     try {
       const messages = useChatStore.getState().conversations
         .find(c => c.id === activeId)?.messages ?? [];
@@ -78,6 +99,7 @@ export function useStreamResponse() {
           updateLastMessage(activeId, accumulatedRef.current);
         }
       }
+      completed = true;
     } catch (err: unknown) {
       if (err instanceof Error && err.name === 'AbortError') {
         // Aborted before any token arrived → drop the empty placeholder so it
@@ -91,6 +113,9 @@ export function useStreamResponse() {
     } finally {
       setIsStreaming(false);
       controllerRef.current = null;
+      if (completed) {
+        maybeGenerateTitle(activeId, baseUrl, currentModel);
+      }
     }
   }, []);
 
