@@ -1,5 +1,6 @@
 import { streamChatRaw } from './ollama';
 import { buildSystemPrompt } from './prompts';
+import { searchWeb } from './webSearch';
 import type {
   Message,
   OllamaMessage,
@@ -29,13 +30,13 @@ export const tools: OllamaTool[] = [
     function: {
       name: 'web_search',
       description:
-        'Search the web for up-to-date information about a topic, person, place, or fact. Returns a short text summary of the top result.',
+        'Search the web for current or factual information: news, prices, weather, events, products, releases, technical questions, or anything that may postdate your training data. Returns the top results as titles, URLs and content snippets. Use ONE broad keyword-style query (e.g. "HP 24f monitor specs"), not a full sentence. Never repeat a query that already returned no results.',
       parameters: {
         type: 'object',
         properties: {
           query: {
             type: 'string',
-            description: 'The search query, e.g. "Eiffel Tower height".',
+            description: 'Broad keyword-style search query, e.g. "iPhone 16 pro price india".',
           },
         },
         required: ['query'],
@@ -52,94 +53,26 @@ function getCurrentTime(): string {
   return new Date().toString();
 }
 
-interface DDGTopic {
-  Text?: string;
-  FirstURL?: string;
-  Topics?: DDGTopic[];
-}
-
-interface DDGResponse {
-  Answer?: string;
-  AbstractText?: string;
-  AbstractSource?: string;
-  AbstractURL?: string;
-  Definition?: string;
-  DefinitionSource?: string;
-  DefinitionURL?: string;
-  Heading?: string;
-  RelatedTopics?: DDGTopic[];
-}
-
-// Flatten DuckDuckGo's RelatedTopics: some entries are groups holding a nested
-// `Topics[]` array rather than a directly-usable `.Text`.
-function flattenTopics(topics: DDGTopic[]): DDGTopic[] {
-  const out: DDGTopic[] = [];
-  for (const t of topics) {
-    if (t.Topics && t.Topics.length) {
-      out.push(...flattenTopics(t.Topics));
-    } else if (t.Text) {
-      out.push(t);
-    }
-  }
-  return out;
-}
-
-async function webSearch(
-  args: Record<string, unknown>,
-  signal?: AbortSignal
-): Promise<string> {
-  const query = typeof args.query === 'string' ? args.query.trim() : '';
-  if (!query) return 'Error: web_search requires a non-empty "query" string.';
-
-  const url =
-    'https://api.duckduckgo.com/?q=' +
-    encodeURIComponent(query) +
-    '&format=json&no_html=1&skip_disambig=1';
-
-  const resp = await fetch(url, { signal });
-  if (!resp.ok) throw new Error('HTTP ' + resp.status);
-  const data: DDGResponse = await resp.json();
-
-  const parts: string[] = [];
-
-  if (data.Answer) parts.push(data.Answer);
-
-  if (data.AbstractText) {
-    const src = data.AbstractSource ? ` (source: ${data.AbstractSource})` : '';
-    parts.push(data.AbstractText + src);
-  }
-
-  if (data.Definition) {
-    const src = data.DefinitionSource ? ` (source: ${data.DefinitionSource})` : '';
-    parts.push(data.Definition + src);
-  }
-
-  if (data.RelatedTopics && data.RelatedTopics.length) {
-    const related = flattenTopics(data.RelatedTopics)
-      .slice(0, 3)
-      .map((t) => (t.FirstURL ? `${t.Text} — ${t.FirstURL}` : t.Text))
-      .filter(Boolean);
-    if (related.length) parts.push('Related:\n' + related.join('\n'));
-  }
-
-  if (parts.length === 0) {
-    return `No instant answer found for "${query}".`;
-  }
-
-  const summary = parts.join('\n\n');
-  return summary.length > 800 ? summary.slice(0, 800) + '…' : summary;
-}
-
 // ---------------------------------------------------------------------------
 // Dispatcher.
 // ---------------------------------------------------------------------------
 
+// Runtime context threaded from the chat hook down to tool implementations.
+export interface ToolContext {
+  searchApiKey: string;
+  signal?: AbortSignal;
+}
+
 const implementations: Record<
   string,
-  (args: Record<string, unknown>, signal?: AbortSignal) => string | Promise<string>
+  (args: Record<string, unknown>, ctx: ToolContext) => string | Promise<string>
 > = {
   get_current_time: () => getCurrentTime(),
-  web_search: (args, signal) => webSearch(args, signal),
+  web_search: (args, ctx) => {
+    const query = typeof args.query === 'string' ? args.query.trim() : '';
+    if (!query) return 'Error: web_search requires a non-empty "query" string.';
+    return searchWeb(query, ctx.searchApiKey, ctx.signal);
+  },
 };
 
 function isAbortError(err: unknown): boolean {
@@ -149,7 +82,7 @@ function isAbortError(err: unknown): boolean {
 export async function executeToolCall(
   name: string,
   args: Record<string, unknown>,
-  signal?: AbortSignal
+  ctx: ToolContext
 ): Promise<string> {
   const impl = implementations[name];
   if (!impl) {
@@ -169,7 +102,7 @@ export async function executeToolCall(
   }
 
   try {
-    return await impl(safeArgs, signal);
+    return await impl(safeArgs, ctx);
   } catch (err) {
     if (isAbortError(err)) throw err; // let aborts cancel the whole loop
     const message = err instanceof Error ? err.message : String(err);
@@ -206,8 +139,9 @@ export async function* streamChatWithTools(
   messages: Message[],
   think: boolean,
   signal: AbortSignal,
-  opts?: { systemPromptOverride?: string }
+  opts?: { systemPromptOverride?: string; searchApiKey?: string }
 ): AsyncGenerator<ToolStreamEvent> {
+  const toolCtx: ToolContext = { searchApiKey: opts?.searchApiKey ?? '', signal };
   let toolsDisabled = toolUnsupportedModels.has(model);
   const systemMessage = (toolsEnabled: boolean): OllamaMessage => ({
     role: 'system',
@@ -285,7 +219,7 @@ export async function* streamChatWithTools(
     console.log('[tools] tool_calls:', toolCalls);
     for (const call of toolCalls) {
       yield { type: 'tool_call', name: call.function.name, arguments: call.function.arguments };
-      const result = await executeToolCall(call.function.name, call.function.arguments, signal);
+      const result = await executeToolCall(call.function.name, call.function.arguments, toolCtx);
       console.log('[tools] result:', call.function.name, result);
       yield { type: 'tool_result', name: call.function.name, result };
       working.push({ role: 'tool', tool_name: call.function.name, content: result });

@@ -77,10 +77,11 @@ export function useStreamResponse() {
       // Exclude the empty assistant message we just added
       const messagesToSend = messages.slice(0, -1);
 
-      const { systemPromptOverride } = useSettingsStore.getState();
+      const { systemPromptOverride, searchApiKey } = useSettingsStore.getState();
 
       for await (const ev of streamChatWithTools(baseUrl, currentModel, messagesToSend, reasoning, controller.signal, {
         systemPromptOverride,
+        searchApiKey,
       })) {
         if (ev.type === 'reset') {
           accumulatedRef.current = '';

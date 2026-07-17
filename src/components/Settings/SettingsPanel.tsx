@@ -24,6 +24,8 @@ export function SettingsPanel() {
   } = useConnectionStore();
   const systemPromptOverride = useSettingsStore((s) => s.systemPromptOverride);
   const setSystemPromptOverride = useSettingsStore((s) => s.setSystemPromptOverride);
+  const searchApiKey = useSettingsStore((s) => s.searchApiKey);
+  const setSearchApiKey = useSettingsStore((s) => s.setSearchApiKey);
   const [urlValue, setUrlValue] = useState(baseUrl);
   const [connectText, setConnectText] = useState('Connect');
   const [syncing, setSyncing] = useState(false);
@@ -151,6 +153,26 @@ export function SettingsPanel() {
           />
           <p className={styles.fieldHint}>
             Sets the assistant's behavior for every chat. Tool instructions are added automatically.
+          </p>
+        </div>
+        <div className={styles.fieldGroup}>
+          <label className={styles.fieldLabel} htmlFor="settings-search-key">Search API key (Tavily)</label>
+          <input
+            type="password"
+            className={styles.fieldInput}
+            id="settings-search-key"
+            value={searchApiKey}
+            onChange={(e) => setSearchApiKey(e.target.value)}
+            placeholder="tvly-..."
+            spellCheck={false}
+            autoComplete="off"
+          />
+          <p className={styles.fieldHint}>
+            Powers the web_search tool. Free key (1,000 searches/month) at{' '}
+            <a className={styles.linkBtn} href="https://app.tavily.com" target="_blank" rel="noreferrer">
+              app.tavily.com
+            </a>
+            . Stored only in this browser.
           </p>
         </div>
       </div>
