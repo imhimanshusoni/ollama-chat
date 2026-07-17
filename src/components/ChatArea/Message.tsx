@@ -109,18 +109,23 @@ function ToolCalls({ calls }: { calls: ToolInvocation[] }) {
   );
 }
 
-function Reasoning({ text, open }: { text: string; open: boolean }) {
+function Reasoning({ text, open, streaming }: { text: string; open: boolean; streaming: boolean }) {
+  const handleToggle = useCallback((e: React.SyntheticEvent<HTMLDetailsElement>) => {
+    // Keep an expanded reasoning trace in view (manual open, or auto-open while streaming).
+    if (e.currentTarget.open) e.currentTarget.scrollIntoView({ block: 'nearest' });
+  }, []);
+
   return (
-    <details className={styles.reasoning} open={open}>
+    <details className={styles.reasoning} open={open} onToggle={handleToggle}>
       <summary className={styles.reasoningSummary}>
         <svg
-          className={styles.reasoningIcon}
-          width="13" height="13" viewBox="0 0 24 24" fill="none"
-          stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+          className={styles.reasoningChevron}
+          width="11" height="11" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
         >
-          <path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.3 1 2.1h6c0-.8.4-1.6 1-2.1A7 7 0 0 0 12 2z" />
+          <polyline points="9 18 15 12 9 6" />
         </svg>
-        <span>Reasoning</span>
+        <span className={streaming ? styles.reasoningLive : undefined}>Reasoning</span>
       </summary>
       <div className={styles.reasoningText}>{text}</div>
     </details>
@@ -151,7 +156,11 @@ function MessageInner({ message, isStreaming }: Props) {
           </div>
         )}
         {!isUser && message.thinking && (
-          <Reasoning text={message.thinking} open={Boolean(isStreaming) && !message.content} />
+          <Reasoning
+            text={message.thinking}
+            open={Boolean(isStreaming) && !message.content}
+            streaming={Boolean(isStreaming) && !message.content}
+          />
         )}
         {!isUser && message.toolCalls && message.toolCalls.length > 0 && (
           <ToolCalls calls={message.toolCalls} />

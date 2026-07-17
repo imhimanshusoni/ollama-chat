@@ -131,21 +131,6 @@ select.fieldInput {
 .statusConnected { background: var(--success); }
 .statusError { background: var(--error); }
 
-/* --- Toggle row --- */
-.toggleRow {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: var(--space-4);
-}
-
-.toggleText {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-  min-width: 0;
-}
-
 .fieldHint {
   margin: 0;
   font-size: var(--font-xs);

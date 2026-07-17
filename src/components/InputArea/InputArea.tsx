@@ -3,6 +3,7 @@ import { useAutoResize } from '../../hooks/useAutoResize';
 import { useConnectionStore } from '../../store/connectionStore';
 import { validateImage, prepareImage, fileToBase64, fileToDataUrl } from '../../utils/imageUtils';
 import { SendButton } from './SendButton';
+import { ComposerControls } from './ComposerControls';
 import styles from './InputArea.module.css';
 
 interface Props {
@@ -160,7 +161,10 @@ export function InputArea({ onSend, onStop, isStreaming }: Props) {
           onClick={isStreaming ? onStop : handleSend}
         />
       </div>
-      <div className={styles.hint}>Enter to send &middot; Shift+Enter for new line &middot; Paste or drop images</div>
+      <div className={styles.footerRow}>
+        <ComposerControls />
+        <div className={styles.hint}>Enter to send &middot; Shift+Enter for new line</div>
+      </div>
     </div>
   );
 }

@@ -129,13 +129,16 @@ export function ChatArea({ isStreaming }: Props) {
   }, [messages.length]);
 
   // --- During streaming, auto-scroll only if sticky ---
+  // Track both the answer and the reasoning trace so the view follows whichever
+  // is currently growing (reasoning streams before any content arrives).
   const lastContent = messages[messages.length - 1]?.content;
+  const lastThinking = messages[messages.length - 1]?.thinking;
   useEffect(() => {
     if (isStreaming && stickyRef.current) {
       const el = scrollRef.current;
       if (el) el.scrollTop = el.scrollHeight;
     }
-  }, [lastContent, isStreaming]);
+  }, [lastContent, lastThinking, isStreaming]);
 
   const handleJump = useCallback(() => {
     stickyRef.current = true;

@@ -3,14 +3,11 @@ import { useConnectionStore } from '../../store/connectionStore';
 import { useUiStore } from '../../store/uiStore';
 import { fetchModels, warmModel } from '../../services/ollama';
 import { IconButton } from '../ui/IconButton';
-import { Toggle } from '../ui/Toggle';
 import styles from './SettingsPanel.module.css';
 
 export function SettingsPanel() {
   const settingsOpen = useUiStore((s) => s.settingsOpen);
   const setSettingsOpen = useUiStore((s) => s.setSettingsOpen);
-  const reasoning = useUiStore((s) => s.reasoning);
-  const setReasoning = useUiStore((s) => s.setReasoning);
   const { baseUrl, currentModel, models, status, setBaseUrl, setCurrentModel, setModels, setStatus } = useConnectionStore();
   const [urlValue, setUrlValue] = useState(baseUrl);
   const [connectText, setConnectText] = useState('Connect');
@@ -82,36 +79,11 @@ export function SettingsPanel() {
             </span>
           </div>
         )}
-        {models.length > 0 && (
-          <div className={styles.fieldGroup}>
-            <label className={styles.fieldLabel} htmlFor="settings-model">Model</label>
-            <select
-              className={styles.fieldInput}
-              id="settings-model"
-              value={currentModel}
-              onChange={(e) => { setCurrentModel(e.target.value); void warmModel(baseUrl, e.target.value); }}
-            >
-              {models.map((m) => (
-                <option key={m} value={m}>{m}</option>
-              ))}
-            </select>
-          </div>
+        {status === 'connected' && (
+          <p className={styles.fieldHint}>
+            Pick your model and toggle reasoning from the controls next to the message box.
+          </p>
         )}
-        <div className={styles.toggleRow}>
-          <div className={styles.toggleText}>
-            <label className={styles.fieldLabel} htmlFor="settings-reasoning">Model reasoning</label>
-            <p className={styles.fieldHint}>
-              Let the model think step by step before replying. More thorough on hard questions,
-              but noticeably slower. Off gives faster, direct answers.
-            </p>
-          </div>
-          <Toggle
-            id="settings-reasoning"
-            checked={reasoning}
-            onChange={setReasoning}
-            label="Toggle model reasoning"
-          />
-        </div>
       </div>
     </div>
   );

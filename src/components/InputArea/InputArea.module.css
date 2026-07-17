@@ -138,19 +138,26 @@
 .sendBtn:disabled { opacity: 0.3; cursor: not-allowed; transform: none; }
 .sendBtn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
-/* --- Hint --- */
+/* --- Footer row (controls + hint) --- */
+.footerRow {
+  max-width: var(--measure);
+  margin: var(--space-2) auto 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
 .hint {
-  text-align: center;
   font-size: var(--font-xs);
   color: var(--text-3);
-  margin-top: var(--space-2);
-  max-width: var(--measure);
-  margin-left: auto;
-  margin-right: auto;
+  white-space: nowrap;
 }
 
 @media (max-width: 768px) {
   .area {
     padding: 0 var(--space-4) var(--space-4);
   }
+  /* Keep the model/reasoning chip; the keyboard hint is redundant on touch. */
+  .hint { display: none; }
 }
