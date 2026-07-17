@@ -4,6 +4,7 @@ import { useChatStore } from './store/chatStore';
 import { useConnectionStore } from './store/connectionStore';
 import { useUiStore } from './store/uiStore';
 import { fetchModels, warmModel } from './services/ollama';
+import { fetchRemoteModelUrl } from './services/remoteConfig';
 import { Sidebar } from './components/Sidebar/Sidebar';
 import { TopBar } from './components/TopBar/TopBar';
 import { ChatArea } from './components/ChatArea/ChatArea';
@@ -26,20 +27,36 @@ export default function App() {
     }
   }, [conversations.length, newChat]);
 
-  // Silent auto-reconnect on load if we have saved URL + model
+  // Silent auto-sync + auto-reconnect on load
   useEffect(() => {
-    const { baseUrl, currentModel, setStatus, setModels } = useConnectionStore.getState();
-    if (baseUrl && currentModel) {
-      fetchModels(baseUrl)
-        .then((models) => {
-          setModels(models);
-          setStatus('connected');
-          void warmModel(baseUrl, currentModel); // preload the saved model on load
-        })
-        .catch(() => {
-          // Silently fail — user can reconnect from settings
-        });
+    async function syncAndConnect() {
+      const { baseUrl, currentModel, isManualOverride, setBaseUrl, setCurrentModel, setStatus, setModels } =
+        useConnectionStore.getState();
+
+      let effectiveUrl = baseUrl;
+      if (!isManualOverride) {
+        const remoteUrl = await fetchRemoteModelUrl();
+        if (remoteUrl && remoteUrl !== baseUrl) {
+          setBaseUrl(remoteUrl);
+          effectiveUrl = remoteUrl;
+        }
+      }
+
+      if (!effectiveUrl) return;
+      try {
+        const modelList = await fetchModels(effectiveUrl);
+        setModels(modelList);
+        setStatus('connected');
+        const model = modelList.includes(currentModel) ? currentModel : modelList[0] ?? '';
+        if (model) {
+          setCurrentModel(model);
+          void warmModel(effectiveUrl, model); // preload the model on load
+        }
+      } catch {
+        // Silently fail — user can reconnect from settings
+      }
     }
+    void syncAndConnect();
   }, []);
 
   return (

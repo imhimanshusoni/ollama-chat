@@ -2,7 +2,6 @@ import { useState, useRef, useCallback } from 'react';
 import { streamChatWithTools } from '../services/ollamaTools';
 import { useChatStore } from '../store/chatStore';
 import { useConnectionStore } from '../store/connectionStore';
-import { useUiStore } from '../store/uiStore';
 
 export function useStreamResponse() {
   const [isStreaming, setIsStreaming] = useState(false);
@@ -10,12 +9,14 @@ export function useStreamResponse() {
   const accumulatedRef = useRef('');
 
   const send = useCallback(async (text: string, images?: string[]) => {
-    const { activeId, addMessage, updateLastMessage, appendThinking, addToolCall, setToolResult, setTitle } =
+    const { activeId, conversations, addMessage, updateLastMessage, appendThinking, addToolCall, setToolResult, setTitle } =
       useChatStore.getState();
     const { baseUrl, currentModel } = useConnectionStore.getState();
-    const { reasoning } = useUiStore.getState();
 
     if (!activeId || !baseUrl || !currentModel) return;
+
+    // Reasoning is stored per-conversation.
+    const reasoning = conversations.find((c) => c.id === activeId)?.reasoning ?? false;
 
     // Add user message (with optional images)
     addMessage(activeId, { role: 'user', content: text, ...(images ? { images } : {}) });

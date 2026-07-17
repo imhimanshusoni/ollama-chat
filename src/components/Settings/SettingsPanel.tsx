@@ -1,19 +1,41 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useConnectionStore } from '../../store/connectionStore';
 import { useUiStore } from '../../store/uiStore';
 import { fetchModels, warmModel } from '../../services/ollama';
+import { fetchRemoteModelUrl } from '../../services/remoteConfig';
 import { IconButton } from '../ui/IconButton';
 import styles from './SettingsPanel.module.css';
 
 export function SettingsPanel() {
   const settingsOpen = useUiStore((s) => s.settingsOpen);
   const setSettingsOpen = useUiStore((s) => s.setSettingsOpen);
-  const { baseUrl, currentModel, models, status, setBaseUrl, setCurrentModel, setModels, setStatus } = useConnectionStore();
+  const {
+    baseUrl,
+    currentModel,
+    models,
+    status,
+    isManualOverride,
+    setBaseUrl,
+    setCurrentModel,
+    setModels,
+    setStatus,
+    clearManualOverride,
+  } = useConnectionStore();
   const [urlValue, setUrlValue] = useState(baseUrl);
   const [connectText, setConnectText] = useState('Connect');
+  const [syncing, setSyncing] = useState(false);
+  // Track focus in a ref so this only fires when baseUrl actually changes (e.g.
+  // a background auto-sync). Keying the effect on a focus *state* would also run
+  // on blur — resetting the field to the old baseUrl right as the user clicks
+  // Connect, discarding what they just typed.
+  const inputFocusedRef = useRef(false);
 
-  const handleConnect = async () => {
-    let url = urlValue.trim().replace(/\/+$/, '');
+  useEffect(() => {
+    if (!inputFocusedRef.current) setUrlValue(baseUrl);
+  }, [baseUrl]);
+
+  const connectTo = async (rawUrl: string, opts?: { manual?: boolean }) => {
+    let url = rawUrl.trim().replace(/\/+$/, '');
     if (!url) return;
     if (!/^https?:\/\//.test(url)) url = 'https://' + url;
     setUrlValue(url);
@@ -22,7 +44,7 @@ export function SettingsPanel() {
 
     try {
       const modelList = await fetchModels(url);
-      setBaseUrl(url);
+      setBaseUrl(url, opts);
       setModels(modelList);
       if (modelList.length > 0) {
         const saved = currentModel;
@@ -35,6 +57,21 @@ export function SettingsPanel() {
     } catch (err) {
       setStatus('error', err instanceof Error ? err.message : 'Connection failed');
       setConnectText('Retry');
+    }
+  };
+
+  const handleConnect = () => connectTo(urlValue, { manual: true });
+
+  const handleSyncFromGithub = async () => {
+    setSyncing(true);
+    try {
+      const remoteUrl = await fetchRemoteModelUrl();
+      if (remoteUrl) {
+        clearManualOverride();
+        await connectTo(remoteUrl);
+      }
+    } finally {
+      setSyncing(false);
     }
   };
 
@@ -61,10 +98,24 @@ export function SettingsPanel() {
             id="settings-url"
             value={urlValue}
             onChange={(e) => setUrlValue(e.target.value)}
+            onFocus={() => { inputFocusedRef.current = true; }}
+            onBlur={() => { inputFocusedRef.current = false; }}
             placeholder="https://your-url.trycloudflare.com"
             spellCheck={false}
             autoComplete="off"
           />
+          <p className={styles.fieldHint}>
+            {isManualOverride ? (
+              <>
+                Manually set, not auto-synced.{' '}
+                <button className={styles.linkBtn} onClick={handleSyncFromGithub} type="button" disabled={syncing}>
+                  {syncing ? 'Syncing…' : 'Sync from GitHub'}
+                </button>
+              </>
+            ) : (
+              'Auto-synced from GitHub'
+            )}
+          </p>
         </div>
         <button className={styles.btnConnect} onClick={handleConnect} type="button">
           {connectText}

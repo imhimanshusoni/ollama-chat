@@ -1,6 +1,6 @@
 import { useRef, useState, useCallback } from 'react';
 import { useConnectionStore } from '../../store/connectionStore';
-import { useUiStore } from '../../store/uiStore';
+import { useChatStore } from '../../store/chatStore';
 import { warmModel } from '../../services/ollama';
 import { useClickOutside } from '../../hooks/useClickOutside';
 import { Toggle } from '../ui/Toggle';
@@ -21,8 +21,10 @@ export function ComposerControls() {
   const models = useConnectionStore((s) => s.models);
   const currentModel = useConnectionStore((s) => s.currentModel);
   const setCurrentModel = useConnectionStore((s) => s.setCurrentModel);
-  const reasoning = useUiStore((s) => s.reasoning);
-  const setReasoning = useUiStore((s) => s.setReasoning);
+  // Reasoning is per-conversation, so each chat remembers its own setting.
+  const activeId = useChatStore((s) => s.activeId);
+  const reasoning = useChatStore((s) => s.conversations.find((c) => c.id === s.activeId)?.reasoning ?? false);
+  const setConversationReasoning = useChatStore((s) => s.setReasoning);
 
   const pickModel = useCallback((m: string) => {
     setCurrentModel(m);
@@ -70,7 +72,11 @@ export function ComposerControls() {
               <span className={styles.reasoningTitle}>Reasoning</span>
               <span className={styles.reasoningHint}>Thinks first. Slower, more thorough.</span>
             </div>
-            <Toggle checked={reasoning} onChange={setReasoning} label="Toggle reasoning" />
+            <Toggle
+              checked={reasoning}
+              onChange={(on) => { if (activeId) setConversationReasoning(activeId, on); }}
+              label="Toggle reasoning"
+            />
           </div>
         </div>
       )}

@@ -138,3 +138,18 @@ select.fieldInput {
   color: var(--text-3);
   max-width: 34ch;
 }
+
+.linkBtn {
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--accent);
+  font-family: var(--font-sans);
+  font-size: var(--font-xs);
+  font-weight: 500;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.linkBtn:hover { color: var(--accent-hover); }
+.linkBtn:disabled { cursor: default; opacity: 0.6; text-decoration: none; }

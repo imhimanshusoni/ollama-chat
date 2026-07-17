@@ -11,6 +11,13 @@ import type {
 // warm-up. Change to a duration (e.g. '30m') if you'd rather it free VRAM.
 const KEEP_ALIVE = -1;
 
+// Context window. Ollama's default (~4096) is quickly exhausted by a long
+// conversation: the prompt fills the window, leaving almost no room to
+// generate, so replies stop early with done_reason "length" (mid-sentence
+// cut-offs). Raising this gives long chats room for both history and answer.
+// gemma supports far larger; 8192 is a safe balance against Colab VRAM.
+const NUM_CTX = 8192;
+
 export async function fetchModels(baseUrl: string): Promise<string[]> {
   const resp = await fetch(baseUrl + '/api/tags');
   if (!resp.ok) throw new Error('HTTP ' + resp.status);
@@ -29,7 +36,10 @@ export async function warmModel(baseUrl: string, model: string): Promise<void> {
     await fetch(baseUrl + '/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ model, messages: [], keep_alive: KEEP_ALIVE }),
+      // Match streamChatRaw's num_ctx so warm-up loads the model at the same
+      // context size — otherwise the first real message changes num_ctx and
+      // forces a reload, defeating the warm-up.
+      body: JSON.stringify({ model, messages: [], keep_alive: KEEP_ALIVE, options: { num_ctx: NUM_CTX } }),
     });
   } catch {
     // ignore — warm-up is best-effort
@@ -58,6 +68,7 @@ export async function* streamChatRaw(
       messages,
       stream: true,
       keep_alive: KEEP_ALIVE,
+      options: { num_ctx: NUM_CTX },
       // gemma-style reasoning models emit their chain-of-thought under
       // message.thinking. Explicitly opt out unless the user enabled it, so
       // the token budget goes to the actual answer.

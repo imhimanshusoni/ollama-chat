@@ -8,10 +8,12 @@ interface ConnectionState {
   models: string[];
   status: ConnectionStatus;
   errorMessage: string;
-  setBaseUrl: (url: string) => void;
+  isManualOverride: boolean;
+  setBaseUrl: (url: string, opts?: { manual?: boolean }) => void;
   setCurrentModel: (model: string) => void;
   setModels: (models: string[]) => void;
   setStatus: (status: ConnectionStatus, errorMessage?: string) => void;
+  clearManualOverride: () => void;
 }
 
 function migrateOldData(): { baseUrl: string; currentModel: string } | null {
@@ -44,11 +46,13 @@ export const useConnectionStore = create<ConnectionState>()(
         models: [],
         status: 'idle' as ConnectionStatus,
         errorMessage: '',
+        isManualOverride: false,
 
-        setBaseUrl: (url) => set({ baseUrl: url }),
+        setBaseUrl: (url, opts) => set({ baseUrl: url, isManualOverride: opts?.manual ?? false }),
         setCurrentModel: (model) => set({ currentModel: model }),
         setModels: (models) => set({ models }),
         setStatus: (status, errorMessage = '') => set({ status, errorMessage }),
+        clearManualOverride: () => set({ isManualOverride: false }),
       };
     },
     {
@@ -56,6 +60,7 @@ export const useConnectionStore = create<ConnectionState>()(
       partialize: (state) => ({
         baseUrl: state.baseUrl,
         currentModel: state.currentModel,
+        isManualOverride: state.isManualOverride,
       }),
     }
   )

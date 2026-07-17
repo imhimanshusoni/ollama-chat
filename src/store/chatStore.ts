@@ -14,6 +14,7 @@ interface ChatState {
   addToolCall: (id: string, invocation: ToolInvocation) => void;
   setToolResult: (id: string, name: string, result: string) => void;
   setTitle: (id: string, title: string) => void;
+  setReasoning: (id: string, reasoning: boolean) => void;
 }
 
 function generateId(): string {
@@ -53,6 +54,7 @@ export const useChatStore = create<ChatState>()(
             title: 'New Chat',
             messages: [],
             created: Date.now(),
+            reasoning: false,
           };
           set((state) => ({
             conversations: [conversation, ...state.conversations],
@@ -159,6 +161,14 @@ export const useChatStore = create<ChatState>()(
           set((state) => ({
             conversations: state.conversations.map((c) =>
               c.id === id ? { ...c, title } : c
+            ),
+          }));
+        },
+
+        setReasoning: (id, reasoning) => {
+          set((state) => ({
+            conversations: state.conversations.map((c) =>
+              c.id === id ? { ...c, reasoning } : c
             ),
           }));
         },

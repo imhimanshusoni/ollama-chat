@@ -6,11 +6,9 @@ interface UiState {
   theme: Theme;
   sidebarOpen: boolean;
   settingsOpen: boolean;
-  reasoning: boolean; // when on, the model reasons (message.thinking) before answering
   toggleTheme: () => void;
   setSidebarOpen: (open: boolean) => void;
   setSettingsOpen: (open: boolean) => void;
-  setReasoning: (on: boolean) => void;
 }
 
 function applyTheme(theme: Theme) {
@@ -43,7 +41,6 @@ export const useUiStore = create<UiState>()(
         theme: initialTheme,
         sidebarOpen: typeof window !== 'undefined' ? window.innerWidth > 768 : true,
         settingsOpen: false,
-        reasoning: false,
 
         toggleTheme: () =>
           set((state) => {
@@ -54,14 +51,12 @@ export const useUiStore = create<UiState>()(
 
         setSidebarOpen: (open) => set({ sidebarOpen: open }),
         setSettingsOpen: (open) => set({ settingsOpen: open }),
-        setReasoning: (on) => set({ reasoning: on }),
       };
     },
     {
       name: 'ollama-ui-store',
       partialize: (state) => ({
         theme: state.theme,
-        reasoning: state.reasoning,
       }),
       onRehydrateStorage: () => (state) => {
         // Apply the persisted theme when store rehydrates

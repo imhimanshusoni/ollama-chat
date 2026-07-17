@@ -19,6 +19,7 @@ export interface Conversation {
   title: string;
   messages: Message[];
   created: number;
+  reasoning?: boolean; // per-chat reasoning setting (defaults off)
 }
 
 export type ConnectionStatus = 'idle' | 'connecting' | 'connected' | 'error';
