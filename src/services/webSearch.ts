@@ -4,6 +4,19 @@
 //
 // All failures are returned as strings rather than thrown so the model can
 // relay them to the user sensibly.
+//
+// The API key comes from a build-time env var (VITE_TAVILY_API_KEY), set in
+// the Vercel project settings. Note: Vite inlines VITE_* vars into the client
+// bundle, so this key is not a server secret — it ships in the published JS.
+// That's acceptable for a personal free-tier key; keep the key rate-limited.
+
+const API_KEY = (import.meta.env.VITE_TAVILY_API_KEY ?? '').trim();
+
+// Whether web search can run at all. Callers use this to avoid offering the
+// tool (or mentioning it) when no key is configured.
+export function isSearchConfigured(): boolean {
+  return API_KEY.length > 0;
+}
 
 interface SearchResult {
   title: string;
@@ -74,25 +87,18 @@ const tavilySearch: SearchProviderFn = async (query, apiKey, signal) => {
 
 const provider: SearchProviderFn = tavilySearch;
 
-export async function searchWeb(
-  query: string,
-  apiKey: string,
-  signal?: AbortSignal
-): Promise<string> {
-  if (!apiKey.trim()) {
-    return 'Error: web search is not configured. Tell the user to add a search API key in Settings.';
+export async function searchWeb(query: string, signal?: AbortSignal): Promise<string> {
+  if (!isSearchConfigured()) {
+    return 'Error: web search is unavailable. Answer from your own knowledge and say the search is unavailable.';
   }
 
   let answer: string | undefined;
   let results: SearchResult[];
   try {
-    ({ answer, results } = await provider(query, apiKey.trim(), signal));
+    ({ answer, results } = await provider(query, API_KEY, signal));
   } catch (err) {
     if (err instanceof Error && err.name === 'AbortError') throw err;
     const message = err instanceof Error ? err.message : String(err);
-    if (message === 'HTTP 401' || message === 'HTTP 403') {
-      return 'Error: the search API key is invalid. Tell the user to check it in Settings.';
-    }
     if (message === 'HTTP 429' || message === 'HTTP 432') {
       return 'Error: search quota exceeded for this month.';
     }

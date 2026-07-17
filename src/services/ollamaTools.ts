@@ -1,6 +1,6 @@
 import { streamChatRaw } from './ollama';
 import { buildSystemPrompt } from './prompts';
-import { searchWeb } from './webSearch';
+import { isSearchConfigured, searchWeb } from './webSearch';
 import { TOOL_RESULT_CAP } from '../utils/tokenEstimate';
 import type {
   Message,
@@ -61,7 +61,6 @@ function getCurrentTime(): string {
 
 // Runtime context threaded from the chat hook down to tool implementations.
 export interface ToolContext {
-  searchApiKey: string;
   signal?: AbortSignal;
 }
 
@@ -73,7 +72,7 @@ const implementations: Record<
   web_search: (args, ctx) => {
     const query = typeof args.query === 'string' ? args.query.trim() : '';
     if (!query) return 'Error: web_search requires a non-empty "query" string.';
-    return searchWeb(query, ctx.searchApiKey, ctx.signal);
+    return searchWeb(query, ctx.signal);
   },
 };
 
@@ -212,13 +211,13 @@ export async function* streamChatWithTools(
   messages: Message[],
   think: boolean,
   signal: AbortSignal,
-  opts?: { systemPromptOverride?: string; searchApiKey?: string; contextSummary?: string }
+  opts?: { systemPromptOverride?: string; contextSummary?: string }
 ): AsyncGenerator<ToolStreamEvent> {
-  const toolCtx: ToolContext = { searchApiKey: opts?.searchApiKey ?? '', signal };
+  const toolCtx: ToolContext = { signal };
   let toolsDisabled = toolUnsupportedModels.has(model);
-  // Without a search key, web_search can only fail — don't offer it, and
-  // don't let the system prompt encourage it.
-  const searchAvailable = Boolean(toolCtx.searchApiKey.trim());
+  // Without a configured search key, web_search can only fail — don't offer
+  // it, and don't let the system prompt encourage it.
+  const searchAvailable = isSearchConfigured();
   const availableTools = searchAvailable
     ? tools
     : tools.filter((t) => t.function.name !== 'web_search');

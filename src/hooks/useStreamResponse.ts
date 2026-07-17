@@ -111,7 +111,7 @@ export function useStreamResponse() {
     setIsStreaming(true);
 
     let completed = false;
-    const { systemPromptOverride, searchApiKey } = useSettingsStore.getState();
+    const { systemPromptOverride } = useSettingsStore.getState();
     // For token estimation in the context window (assume tools active).
     const systemPromptText = buildSystemPrompt(systemPromptOverride, true);
 
@@ -129,7 +129,6 @@ export function useStreamResponse() {
 
       for await (const ev of streamChatWithTools(baseUrl, currentModel, history, reasoning, controller.signal, {
         systemPromptOverride,
-        searchApiKey,
         contextSummary: summaryText,
       })) {
         if (ev.type === 'reset') {
