@@ -11,6 +11,7 @@ export interface Message {
   content: string;
   images?: string[]; // base64-encoded, no data URI prefix
   toolCalls?: ToolInvocation[];
+  thinking?: string; // reasoning trace, populated only when reasoning is enabled
 }
 
 export interface Conversation {
@@ -50,7 +51,7 @@ export interface OllamaTool {
 }
 
 export interface OllamaChatChunk {
-  message?: { content?: string; tool_calls?: OllamaToolCall[] };
+  message?: { content?: string; thinking?: string; tool_calls?: OllamaToolCall[] };
   done?: boolean;
 }
 
@@ -60,5 +61,6 @@ export interface OllamaChatChunk {
 export type ToolStreamEvent =
   | { type: 'delta'; value: string }
   | { type: 'reset' }
+  | { type: 'thinking'; value: string }
   | { type: 'tool_call'; name: string; arguments: Record<string, unknown> }
   | { type: 'tool_result'; name: string; result: string };

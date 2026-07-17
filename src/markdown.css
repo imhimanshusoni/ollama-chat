@@ -184,7 +184,10 @@
 /* ============================
    STREAMING CURSOR
    ============================ */
-.cursor-blink::after {
+/* Attach the caret to the end of the last rendered block (usually the
+   paragraph being written) so it trails the text inline, rather than to the
+   container, which would drop it onto its own line below. */
+.cursor-blink > *:last-child::after {
   content: '';
   display: inline-block;
   width: 2px;

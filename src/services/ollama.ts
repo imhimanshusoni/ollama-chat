@@ -47,8 +47,9 @@ export async function* streamChatRaw(
   model: string,
   messages: OllamaMessage[],
   tools: OllamaTool[],
+  think: boolean,
   signal: AbortSignal
-): AsyncGenerator<{ content?: string; toolCalls?: OllamaToolCall[]; done?: boolean }> {
+): AsyncGenerator<{ content?: string; thinking?: string; toolCalls?: OllamaToolCall[]; done?: boolean }> {
   const resp = await fetch(baseUrl + '/api/chat', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -57,6 +58,10 @@ export async function* streamChatRaw(
       messages,
       stream: true,
       keep_alive: KEEP_ALIVE,
+      // gemma-style reasoning models emit their chain-of-thought under
+      // message.thinking. Explicitly opt out unless the user enabled it, so
+      // the token budget goes to the actual answer.
+      think,
       ...(tools.length ? { tools } : {}),
     }),
     signal,
@@ -77,9 +82,10 @@ export async function* streamChatRaw(
       return; // skip malformed lines
     }
     const content = j.message?.content;
+    const thinking = j.message?.thinking;
     const toolCalls = j.message?.tool_calls;
-    if (content || (toolCalls && toolCalls.length) || j.done) {
-      yield { content, toolCalls, done: j.done };
+    if (content || thinking || (toolCalls && toolCalls.length) || j.done) {
+      yield { content, thinking, toolCalls, done: j.done };
     }
   };
 

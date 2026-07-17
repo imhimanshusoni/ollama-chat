@@ -2,6 +2,7 @@ import { useState, useRef, useCallback } from 'react';
 import { streamChatWithTools } from '../services/ollamaTools';
 import { useChatStore } from '../store/chatStore';
 import { useConnectionStore } from '../store/connectionStore';
+import { useUiStore } from '../store/uiStore';
 
 export function useStreamResponse() {
   const [isStreaming, setIsStreaming] = useState(false);
@@ -9,9 +10,10 @@ export function useStreamResponse() {
   const accumulatedRef = useRef('');
 
   const send = useCallback(async (text: string, images?: string[]) => {
-    const { activeId, addMessage, updateLastMessage, addToolCall, setToolResult, setTitle } =
+    const { activeId, addMessage, updateLastMessage, appendThinking, addToolCall, setToolResult, setTitle } =
       useChatStore.getState();
     const { baseUrl, currentModel } = useConnectionStore.getState();
+    const { reasoning } = useUiStore.getState();
 
     if (!activeId || !baseUrl || !currentModel) return;
 
@@ -41,10 +43,12 @@ export function useStreamResponse() {
       // Exclude the empty assistant message we just added
       const messagesToSend = messages.slice(0, -1);
 
-      for await (const ev of streamChatWithTools(baseUrl, currentModel, messagesToSend, controller.signal)) {
+      for await (const ev of streamChatWithTools(baseUrl, currentModel, messagesToSend, reasoning, controller.signal)) {
         if (ev.type === 'reset') {
           accumulatedRef.current = '';
           updateLastMessage(activeId, '');
+        } else if (ev.type === 'thinking') {
+          appendThinking(activeId, ev.value);
         } else if (ev.type === 'tool_call') {
           addToolCall(activeId, { name: ev.name, arguments: ev.arguments });
         } else if (ev.type === 'tool_result') {

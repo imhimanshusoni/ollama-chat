@@ -201,6 +201,44 @@
   max-height: 16rem;
 }
 
+/* --- Reasoning disclosure --- */
+.reasoning {
+  margin-bottom: var(--space-3);
+  font-size: var(--font-sm);
+}
+
+.reasoningSummary {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-2);
+  margin-left: calc(var(--space-2) * -1);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  color: var(--text-3);
+  list-style: none;
+  user-select: none;
+  transition: color 0.15s var(--ease);
+}
+
+.reasoningSummary::-webkit-details-marker { display: none; }
+.reasoningSummary:hover { color: var(--text-2); }
+.reasoningIcon { flex-shrink: 0; }
+
+.reasoningText {
+  margin-top: var(--space-2);
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--bg-active);
+  color: var(--text-3);
+  font-size: var(--font-sm);
+  line-height: 1.6;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+  max-height: 22rem;
+  overflow-y: auto;
+}
+
 /* --- Copy button --- */
 .copyBtn {
   position: absolute;

@@ -203,6 +203,7 @@ export async function* streamChatWithTools(
   baseUrl: string,
   model: string,
   messages: Message[],
+  think: boolean,
   signal: AbortSignal
 ): AsyncGenerator<ToolStreamEvent> {
   const working: OllamaMessage[] = messages.map(toOllamaMessage);
@@ -217,7 +218,10 @@ export async function* streamChatWithTools(
     const toolCalls: OllamaToolCall[] = [];
 
     try {
-      for await (const chunk of streamChatRaw(baseUrl, model, working, activeTools, signal)) {
+      for await (const chunk of streamChatRaw(baseUrl, model, working, activeTools, think, signal)) {
+        if (chunk.thinking) {
+          yield { type: 'thinking', value: chunk.thinking };
+        }
         if (chunk.content) {
           content += chunk.content;
           yield { type: 'delta', value: chunk.content };
@@ -264,7 +268,8 @@ export async function* streamChatWithTools(
   if (signal.aborted) return;
   console.warn('[tools] hit MAX_TOOL_ITERATIONS, forcing a final answer');
   yield { type: 'reset' };
-  for await (const chunk of streamChatRaw(baseUrl, model, working, [], signal)) {
+  for await (const chunk of streamChatRaw(baseUrl, model, working, [], think, signal)) {
+    if (chunk.thinking) yield { type: 'thinking', value: chunk.thinking };
     if (chunk.content) yield { type: 'delta', value: chunk.content };
   }
 }

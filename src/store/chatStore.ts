@@ -10,6 +10,7 @@ interface ChatState {
   deleteChat: (id: string) => void;
   addMessage: (id: string, msg: Message) => void;
   updateLastMessage: (id: string, content: string) => void;
+  appendThinking: (id: string, delta: string) => void;
   addToolCall: (id: string, invocation: ToolInvocation) => void;
   setToolResult: (id: string, name: string, result: string) => void;
   setTitle: (id: string, title: string) => void;
@@ -93,6 +94,21 @@ export const useChatStore = create<ChatState>()(
               messages[messages.length - 1] = {
                 ...messages[messages.length - 1],
                 content,
+              };
+              return { ...c, messages };
+            }),
+          }));
+        },
+
+        appendThinking: (id, delta) => {
+          set((state) => ({
+            conversations: state.conversations.map((c) => {
+              if (c.id !== id || c.messages.length === 0) return c;
+              const messages = [...c.messages];
+              const last = messages[messages.length - 1];
+              messages[messages.length - 1] = {
+                ...last,
+                thinking: (last.thinking ?? '') + delta,
               };
               return { ...c, messages };
             }),
