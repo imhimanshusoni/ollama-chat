@@ -7,10 +7,11 @@ import styles from './InputArea.module.css';
 
 interface Props {
   onSend: (text: string, images?: string[]) => void;
+  onStop: () => void;
   isStreaming: boolean;
 }
 
-export function InputArea({ onSend, isStreaming }: Props) {
+export function InputArea({ onSend, onStop, isStreaming }: Props) {
   const [value, setValue] = useState('');
   const [imageBase64, setImageBase64] = useState<string | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -153,7 +154,11 @@ export function InputArea({ onSend, isStreaming }: Props) {
           onPaste={handlePaste}
           disabled={notConnected}
         />
-        <SendButton disabled={notConnected || isStreaming || (!value.trim() && !imageBase64)} onClick={handleSend} />
+        <SendButton
+          isStreaming={isStreaming}
+          disabled={isStreaming ? false : notConnected || (!value.trim() && !imageBase64)}
+          onClick={isStreaming ? onStop : handleSend}
+        />
       </div>
       <div className={styles.hint}>Enter to send &middot; Shift+Enter for new line &middot; Paste or drop images</div>
     </div>

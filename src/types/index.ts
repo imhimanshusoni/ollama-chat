@@ -1,7 +1,16 @@
+// A tool the assistant invoked while producing a message. Stored on the
+// message so the tool activity stays visible and survives a reload.
+export interface ToolInvocation {
+  name: string;
+  arguments: Record<string, unknown>;
+  result?: string; // undefined while the tool is still running
+}
+
 export interface Message {
   role: 'user' | 'assistant';
   content: string;
   images?: string[]; // base64-encoded, no data URI prefix
+  toolCalls?: ToolInvocation[];
 }
 
 export interface Conversation {
@@ -50,4 +59,6 @@ export interface OllamaChatChunk {
 // intermediate rounds never leak into the visible answer).
 export type ToolStreamEvent =
   | { type: 'delta'; value: string }
-  | { type: 'reset' };
+  | { type: 'reset' }
+  | { type: 'tool_call'; name: string; arguments: Record<string, unknown> }
+  | { type: 'tool_result'; name: string; result: string };

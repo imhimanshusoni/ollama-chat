@@ -9,7 +9,8 @@ export function useStreamResponse() {
   const accumulatedRef = useRef('');
 
   const send = useCallback(async (text: string, images?: string[]) => {
-    const { activeId, addMessage, updateLastMessage, setTitle } = useChatStore.getState();
+    const { activeId, addMessage, updateLastMessage, addToolCall, setToolResult, setTitle } =
+      useChatStore.getState();
     const { baseUrl, currentModel } = useConnectionStore.getState();
 
     if (!activeId || !baseUrl || !currentModel) return;
@@ -44,6 +45,10 @@ export function useStreamResponse() {
         if (ev.type === 'reset') {
           accumulatedRef.current = '';
           updateLastMessage(activeId, '');
+        } else if (ev.type === 'tool_call') {
+          addToolCall(activeId, { name: ev.name, arguments: ev.arguments });
+        } else if (ev.type === 'tool_result') {
+          setToolResult(activeId, ev.name, ev.result);
         } else {
           accumulatedRef.current += ev.value;
           updateLastMessage(activeId, accumulatedRef.current);

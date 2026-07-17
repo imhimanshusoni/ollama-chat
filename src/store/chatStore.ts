@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { Conversation, Message } from '../types';
+import type { Conversation, Message, ToolInvocation } from '../types';
 
 interface ChatState {
   conversations: Conversation[];
@@ -10,6 +10,8 @@ interface ChatState {
   deleteChat: (id: string) => void;
   addMessage: (id: string, msg: Message) => void;
   updateLastMessage: (id: string, content: string) => void;
+  addToolCall: (id: string, invocation: ToolInvocation) => void;
+  setToolResult: (id: string, name: string, result: string) => void;
   setTitle: (id: string, title: string) => void;
 }
 
@@ -92,6 +94,46 @@ export const useChatStore = create<ChatState>()(
                 ...messages[messages.length - 1],
                 content,
               };
+              return { ...c, messages };
+            }),
+          }));
+        },
+
+        addToolCall: (id, invocation) => {
+          set((state) => ({
+            conversations: state.conversations.map((c) => {
+              if (c.id !== id || c.messages.length === 0) return c;
+              const messages = [...c.messages];
+              const last = messages[messages.length - 1];
+              messages[messages.length - 1] = {
+                ...last,
+                toolCalls: [...(last.toolCalls ?? []), invocation],
+              };
+              return { ...c, messages };
+            }),
+          }));
+        },
+
+        setToolResult: (id, name, result) => {
+          set((state) => ({
+            conversations: state.conversations.map((c) => {
+              if (c.id !== id || c.messages.length === 0) return c;
+              const messages = [...c.messages];
+              const last = messages[messages.length - 1];
+              const calls = last.toolCalls;
+              if (!calls || calls.length === 0) return c;
+              // Fill the most recent pending (result-less) invocation of this tool.
+              let idx = -1;
+              for (let i = calls.length - 1; i >= 0; i--) {
+                if (calls[i].name === name && calls[i].result === undefined) {
+                  idx = i;
+                  break;
+                }
+              }
+              if (idx === -1) return c;
+              const nextCalls = [...calls];
+              nextCalls[idx] = { ...nextCalls[idx], result };
+              messages[messages.length - 1] = { ...last, toolCalls: nextCalls };
               return { ...c, messages };
             }),
           }));

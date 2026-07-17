@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useConnectionStore } from '../../store/connectionStore';
 import { useUiStore } from '../../store/uiStore';
-import { fetchModels } from '../../services/ollama';
+import { fetchModels, warmModel } from '../../services/ollama';
 import { IconButton } from '../ui/IconButton';
 import styles from './SettingsPanel.module.css';
 
@@ -28,6 +28,7 @@ export function SettingsPanel() {
         const saved = currentModel;
         const model = modelList.includes(saved) ? saved : modelList[0];
         setCurrentModel(model);
+        void warmModel(url, model); // preload so the first message is fast
       }
       setStatus('connected');
       setConnectText('Reconnect');
@@ -85,7 +86,7 @@ export function SettingsPanel() {
               className={styles.fieldInput}
               id="settings-model"
               value={currentModel}
-              onChange={(e) => setCurrentModel(e.target.value)}
+              onChange={(e) => { setCurrentModel(e.target.value); void warmModel(baseUrl, e.target.value); }}
             >
               {models.map((m) => (
                 <option key={m} value={m}>{m}</option>

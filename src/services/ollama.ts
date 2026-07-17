@@ -5,11 +5,35 @@ import type {
   OllamaToolCall,
 } from '../types';
 
+// Keep the model resident in VRAM so Ollama doesn't unload it after its
+// default ~5min idle — an unload forces a slow multi-second reload on the next
+// message. -1 pins it loaded indefinitely. Sent on every chat request and on
+// warm-up. Change to a duration (e.g. '30m') if you'd rather it free VRAM.
+const KEEP_ALIVE = -1;
+
 export async function fetchModels(baseUrl: string): Promise<string[]> {
   const resp = await fetch(baseUrl + '/api/tags');
   if (!resp.ok) throw new Error('HTTP ' + resp.status);
   const data = await resp.json();
   return (data.models || []).map((m: { name: string }) => m.name);
+}
+
+/**
+ * Preload a model into memory (and pin it via keep_alive) so the first real
+ * message doesn't pay the load cost. Ollama loads the model when `messages` is
+ * empty. Best-effort and fire-and-forget — errors are swallowed.
+ */
+export async function warmModel(baseUrl: string, model: string): Promise<void> {
+  if (!baseUrl || !model) return;
+  try {
+    await fetch(baseUrl + '/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model, messages: [], keep_alive: KEEP_ALIVE }),
+    });
+  } catch {
+    // ignore — warm-up is best-effort
+  }
 }
 
 /**
@@ -32,6 +56,7 @@ export async function* streamChatRaw(
       model,
       messages,
       stream: true,
+      keep_alive: KEEP_ALIVE,
       ...(tools.length ? { tools } : {}),
     }),
     signal,

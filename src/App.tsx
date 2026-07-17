@@ -3,7 +3,7 @@ import { useStreamResponse } from './hooks/useStreamResponse';
 import { useChatStore } from './store/chatStore';
 import { useConnectionStore } from './store/connectionStore';
 import { useUiStore } from './store/uiStore';
-import { fetchModels } from './services/ollama';
+import { fetchModels, warmModel } from './services/ollama';
 import { Sidebar } from './components/Sidebar/Sidebar';
 import { TopBar } from './components/TopBar/TopBar';
 import { ChatArea } from './components/ChatArea/ChatArea';
@@ -13,7 +13,7 @@ import { SettingsOverlay } from './components/Settings/SettingsOverlay';
 import styles from './App.module.css';
 
 export default function App() {
-  const { send, isStreaming } = useStreamResponse();
+  const { send, isStreaming, abort } = useStreamResponse();
   const settingsOpen = useUiStore((s) => s.settingsOpen);
   const setSettingsOpen = useUiStore((s) => s.setSettingsOpen);
   const conversations = useChatStore((s) => s.conversations);
@@ -34,6 +34,7 @@ export default function App() {
         .then((models) => {
           setModels(models);
           setStatus('connected');
+          void warmModel(baseUrl, currentModel); // preload the saved model on load
         })
         .catch(() => {
           // Silently fail — user can reconnect from settings
@@ -47,7 +48,7 @@ export default function App() {
       <div className={styles.main}>
         <TopBar />
         <ChatArea isStreaming={isStreaming} />
-        <InputArea onSend={send} isStreaming={isStreaming} />
+        <InputArea onSend={send} onStop={abort} isStreaming={isStreaming} />
       </div>
       <SettingsOverlay open={settingsOpen} onClose={() => setSettingsOpen(false)} />
       <SettingsPanel />

@@ -252,8 +252,10 @@ export async function* streamChatWithTools(
 
     console.log('[tools] tool_calls:', toolCalls);
     for (const call of toolCalls) {
+      yield { type: 'tool_call', name: call.function.name, arguments: call.function.arguments };
       const result = await executeToolCall(call.function.name, call.function.arguments, signal);
       console.log('[tools] result:', call.function.name, result);
+      yield { type: 'tool_result', name: call.function.name, result };
       working.push({ role: 'tool', tool_name: call.function.name, content: result });
     }
   }

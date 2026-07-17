@@ -2,22 +2,30 @@ import styles from './InputArea.module.css';
 
 interface Props {
   disabled: boolean;
+  isStreaming?: boolean;
   onClick: () => void;
 }
 
-export function SendButton({ disabled, onClick }: Props) {
+export function SendButton({ disabled, isStreaming, onClick }: Props) {
   return (
     <button
       className={styles.sendBtn}
       disabled={disabled}
       onClick={onClick}
-      aria-label="Send"
+      aria-label={isStreaming ? 'Stop' : 'Send'}
+      title={isStreaming ? 'Stop generating' : 'Send'}
       type="button"
     >
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-        <line x1="5" y1="12" x2="19" y2="12" />
-        <polyline points="12 5 19 12 12 19" />
-      </svg>
+      {isStreaming ? (
+        <svg viewBox="0 0 24 24" fill="currentColor" stroke="none">
+          <rect x="6" y="6" width="12" height="12" rx="2" />
+        </svg>
+      ) : (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <line x1="5" y1="12" x2="19" y2="12" />
+          <polyline points="12 5 19 12 12 19" />
+        </svg>
+      )}
     </button>
   );
 }

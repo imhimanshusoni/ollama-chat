@@ -1,5 +1,5 @@
 import { memo, useState, useCallback, useEffect, useRef } from 'react';
-import type { Message as MessageType } from '../../types';
+import type { Message as MessageType, ToolInvocation } from '../../types';
 import { MarkdownRenderer } from '../Markdown/MarkdownRenderer';
 import { escapeHtml } from '../../utils/escapeHtml';
 import styles from './Message.module.css';
@@ -62,6 +62,53 @@ function ThinkingIndicator() {
   );
 }
 
+function formatArgs(args: Record<string, unknown>): string {
+  const keys = Object.keys(args);
+  if (keys.length === 0) return '';
+  return keys
+    .map((k) => `${k}: ${typeof args[k] === 'string' ? args[k] : JSON.stringify(args[k])}`)
+    .join(', ');
+}
+
+function ToolCalls({ calls }: { calls: ToolInvocation[] }) {
+  return (
+    <div className={styles.toolCalls}>
+      {calls.map((call, i) => {
+        const running = call.result === undefined;
+        const argSummary = formatArgs(call.arguments);
+        return (
+          <details key={i} className={styles.toolCall}>
+            <summary className={styles.toolSummary}>
+              <svg
+                className={styles.toolIcon}
+                width="13" height="13" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+              >
+                <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
+              </svg>
+              <span className={styles.toolName}>{call.name}</span>
+              {argSummary && <span className={styles.toolArgSummary}>{argSummary}</span>}
+              {running && <span className={styles.toolRunning}>running…</span>}
+            </summary>
+            <div className={styles.toolDetail}>
+              {argSummary && (
+                <div className={styles.toolBlock}>
+                  <span className={styles.toolLabel}>Arguments</span>
+                  <pre className={styles.toolPre}>{JSON.stringify(call.arguments, null, 2)}</pre>
+                </div>
+              )}
+              <div className={styles.toolBlock}>
+                <span className={styles.toolLabel}>Result</span>
+                <pre className={styles.toolPre}>{running ? '…' : call.result}</pre>
+              </div>
+            </div>
+          </details>
+        );
+      })}
+    </div>
+  );
+}
+
 function MessageInner({ message, isStreaming }: Props) {
   const isUser = message.role === 'user';
   const isWaiting = isStreaming && !message.content;
@@ -84,6 +131,9 @@ function MessageInner({ message, isStreaming }: Props) {
               />
             ))}
           </div>
+        )}
+        {!isUser && message.toolCalls && message.toolCalls.length > 0 && (
+          <ToolCalls calls={message.toolCalls} />
         )}
         {isUser ? (
           <span dangerouslySetInnerHTML={{ __html: escapeHtml(message.content).replace(/\n/g, '<br>') }} />
