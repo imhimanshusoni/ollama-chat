@@ -55,15 +55,24 @@ export function ChatArea({ isStreaming }: Props) {
       }
     };
 
+    // Covers scrollbar drags, which emit no wheel/touch/key events. Our own
+    // pin-to-bottom lands at distance ~0 so it never self-disengages; content
+    // growth alone doesn't fire scroll events.
+    const handleScroll = () => {
+      if (el.scrollHeight - el.scrollTop - el.clientHeight > 150) disengage();
+    };
+
     el.addEventListener('wheel', handleWheel, { passive: true });
     el.addEventListener('touchstart', handleTouchStart, { passive: true });
     el.addEventListener('touchmove', handleTouchMove, { passive: true });
+    el.addEventListener('scroll', handleScroll, { passive: true });
     window.addEventListener('keydown', handleKeyDown);
 
     return () => {
       el.removeEventListener('wheel', handleWheel);
       el.removeEventListener('touchstart', handleTouchStart);
       el.removeEventListener('touchmove', handleTouchMove);
+      el.removeEventListener('scroll', handleScroll);
       window.removeEventListener('keydown', handleKeyDown);
     };
   }, []);

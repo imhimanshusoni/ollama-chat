@@ -3,10 +3,21 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
+import type { Processor } from 'unified';
 import { CodeBlock } from './CodeBlock';
 
 interface Props {
   content: string;
+  // 'reasoning': chain-of-thought is pseudo-markdown — 4-space-indented lines
+  // are ordinary text, not code, so the indented-code rule is disabled to stop
+  // random highlighted code boxes appearing mid-thought. Fenced ``` blocks
+  // still render as code.
+  variant?: 'chat' | 'reasoning';
+}
+
+function remarkNoIndentedCode(this: Processor) {
+  const data = this.data() as { micromarkExtensions?: unknown[] };
+  (data.micromarkExtensions ??= []).push({ disable: { null: ['codeIndented'] } });
 }
 
 function extractText(children: ReactNode): string {
@@ -18,10 +29,14 @@ function extractText(children: ReactNode): string {
   return String(children ?? '');
 }
 
-function MarkdownRendererInner({ content }: Props) {
+function MarkdownRendererInner({ content, variant = 'chat' }: Props) {
   return (
     <ReactMarkdown
-      remarkPlugins={[remarkGfm, remarkMath]}
+      remarkPlugins={
+        variant === 'reasoning'
+          ? [remarkNoIndentedCode, remarkGfm, remarkMath]
+          : [remarkGfm, remarkMath]
+      }
       rehypePlugins={[rehypeKatex]}
       components={{
         code({ className, children, node }) {

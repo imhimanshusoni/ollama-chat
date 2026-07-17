@@ -111,16 +111,29 @@ function ToolCalls({ calls }: { calls: ToolInvocation[] }) {
 
 function Reasoning({ text, open, streaming }: { text: string; open: boolean; streaming: boolean }) {
   const bodyRef = useRef<HTMLDivElement>(null);
+  // Follow the newest tokens only while the user is at the bottom of the box.
+  // Scrolling up inside it disengages; scrolling back down re-engages. Content
+  // growth alone never fires scroll events, so this only reacts to the user
+  // (and to our own pin-to-bottom, which lands at distance 0 and keeps it on).
+  const followRef = useRef(true);
 
   const handleToggle = useCallback((e: React.SyntheticEvent<HTMLDetailsElement>) => {
     // Keep an expanded reasoning trace in view (manual open, or auto-open while streaming).
     if (e.currentTarget.open) e.currentTarget.scrollIntoView({ block: 'nearest' });
   }, []);
 
+  const handleBodyScroll = useCallback(() => {
+    const el = bodyRef.current;
+    if (!el) return;
+    followRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 24;
+  }, []);
+
   // While reasoning streams, keep the (height-capped) box pinned to the latest
-  // tokens so you can watch it think, instead of it scrolling out of view.
+  // tokens so you can watch it think — unless the user scrolled up to read.
   useEffect(() => {
-    if (streaming && bodyRef.current) bodyRef.current.scrollTop = bodyRef.current.scrollHeight;
+    if (streaming && followRef.current && bodyRef.current) {
+      bodyRef.current.scrollTop = bodyRef.current.scrollHeight;
+    }
   }, [text, streaming]);
 
   return (
@@ -135,8 +148,8 @@ function Reasoning({ text, open, streaming }: { text: string; open: boolean; str
         </svg>
         <span className={streaming ? styles.reasoningLive : undefined}>Reasoning</span>
       </summary>
-      <div className={styles.reasoningText} ref={bodyRef}>
-        <MarkdownRenderer content={text} />
+      <div className={styles.reasoningText} ref={bodyRef} onScroll={handleBodyScroll}>
+        <MarkdownRenderer content={text} variant="reasoning" />
       </div>
     </details>
   );
