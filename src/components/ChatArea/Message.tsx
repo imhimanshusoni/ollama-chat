@@ -110,10 +110,18 @@ function ToolCalls({ calls }: { calls: ToolInvocation[] }) {
 }
 
 function Reasoning({ text, open, streaming }: { text: string; open: boolean; streaming: boolean }) {
+  const bodyRef = useRef<HTMLDivElement>(null);
+
   const handleToggle = useCallback((e: React.SyntheticEvent<HTMLDetailsElement>) => {
     // Keep an expanded reasoning trace in view (manual open, or auto-open while streaming).
     if (e.currentTarget.open) e.currentTarget.scrollIntoView({ block: 'nearest' });
   }, []);
+
+  // While reasoning streams, keep the (height-capped) box pinned to the latest
+  // tokens so you can watch it think, instead of it scrolling out of view.
+  useEffect(() => {
+    if (streaming && bodyRef.current) bodyRef.current.scrollTop = bodyRef.current.scrollHeight;
+  }, [text, streaming]);
 
   return (
     <details className={styles.reasoning} open={open} onToggle={handleToggle}>
@@ -127,7 +135,9 @@ function Reasoning({ text, open, streaming }: { text: string; open: boolean; str
         </svg>
         <span className={streaming ? styles.reasoningLive : undefined}>Reasoning</span>
       </summary>
-      <div className={styles.reasoningText}>{text}</div>
+      <div className={styles.reasoningText} ref={bodyRef}>
+        <MarkdownRenderer content={text} />
+      </div>
     </details>
   );
 }
