@@ -12,8 +12,12 @@ interface Props {
   isStreaming: boolean;
 }
 
+const isTouchDevice = () =>
+  typeof window !== 'undefined' && window.matchMedia?.('(pointer: coarse)').matches;
+
 export function InputArea({ onSend, onStop, isStreaming }: Props) {
   const [value, setValue] = useState('');
+  const [touch] = useState(isTouchDevice);
   const [imageBase64, setImageBase64] = useState<string | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [dragOver, setDragOver] = useState(false);
@@ -57,11 +61,14 @@ export function InputArea({ onSend, onStop, isStreaming }: Props) {
   }, [value, imageBase64, notConnected, isStreaming, onSend, removeImage, reset]);
 
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
+    // On touch devices there's no easy Shift key, so Enter inserts a
+    // newline like the on-screen keyboard implies; users tap Send instead.
+    if (touch) return;
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSend();
     }
-  }, [handleSend]);
+  }, [handleSend, touch]);
 
   const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -154,6 +161,7 @@ export function InputArea({ onSend, onStop, isStreaming }: Props) {
           onKeyDown={handleKeyDown}
           onPaste={handlePaste}
           disabled={notConnected}
+          enterKeyHint={touch ? 'enter' : 'send'}
         />
         <SendButton
           isStreaming={isStreaming}
@@ -163,7 +171,9 @@ export function InputArea({ onSend, onStop, isStreaming }: Props) {
       </div>
       <div className={styles.footerRow}>
         <ComposerControls />
-        <div className={styles.hint}>Enter to send &middot; Shift+Enter for new line</div>
+        <div className={styles.hint}>
+          {touch ? 'Tap send to send · Enter for new line' : 'Enter to send · Shift+Enter for new line'}
+        </div>
       </div>
     </div>
   );
