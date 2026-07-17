@@ -211,7 +211,7 @@ export async function* streamChatWithTools(
   messages: Message[],
   think: boolean,
   signal: AbortSignal,
-  opts?: { systemPromptOverride?: string; contextSummary?: string }
+  opts?: { contextSummary?: string }
 ): AsyncGenerator<ToolStreamEvent> {
   const toolCtx: ToolContext = { signal };
   let toolsDisabled = toolUnsupportedModels.has(model);
@@ -224,7 +224,7 @@ export async function* streamChatWithTools(
   const systemMessage = (toolsEnabled: boolean): OllamaMessage => ({
     role: 'system',
     content:
-      buildSystemPrompt(opts?.systemPromptOverride ?? '', toolsEnabled, searchAvailable) +
+      buildSystemPrompt('', toolsEnabled, searchAvailable) +
       (opts?.contextSummary
         ? `\n\nSummary of the earlier conversation (for your memory):\n${opts.contextSummary}`
         : ''),

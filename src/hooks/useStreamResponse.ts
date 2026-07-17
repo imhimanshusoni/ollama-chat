@@ -6,7 +6,6 @@ import { summarizeSpan } from '../services/summarizer';
 import { generateChatTitle } from '../services/titleGenerator';
 import { useChatStore } from '../store/chatStore';
 import { useConnectionStore } from '../store/connectionStore';
-import { useSettingsStore } from '../store/settingsStore';
 
 // Background meta calls (title, summary) share one controller so a new send
 // can abort them — on a single-slot Ollama instance they'd otherwise queue
@@ -111,9 +110,8 @@ export function useStreamResponse() {
     setIsStreaming(true);
 
     let completed = false;
-    const { systemPromptOverride } = useSettingsStore.getState();
     // For token estimation in the context window (assume tools active).
-    const systemPromptText = buildSystemPrompt(systemPromptOverride, true);
+    const systemPromptText = buildSystemPrompt('', true);
 
     try {
       const conv = useChatStore.getState().conversations.find(c => c.id === activeId);
@@ -128,7 +126,6 @@ export function useStreamResponse() {
       );
 
       for await (const ev of streamChatWithTools(baseUrl, currentModel, history, reasoning, controller.signal, {
-        systemPromptOverride,
         contextSummary: summaryText,
       })) {
         if (ev.type === 'reset') {
