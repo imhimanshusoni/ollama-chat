@@ -216,9 +216,11 @@ export async function* streamChatWithTools(
     const activeTools = toolsDisabled ? [] : tools;
     let content = '';
     const toolCalls: OllamaToolCall[] = [];
+    let receivedChunk = false;
 
     try {
       for await (const chunk of streamChatRaw(baseUrl, model, working, activeTools, think, signal)) {
+        receivedChunk = true;
         if (chunk.thinking) {
           yield { type: 'thinking', value: chunk.thinking };
         }
@@ -232,11 +234,16 @@ export async function* streamChatWithTools(
       }
     } catch (err) {
       if (isAbortError(err)) throw err;
-      // The model may reject `tools` (e.g. its template lacks tool support).
-      // Only safe to fall back on the first, still-tool-enabled round, before
-      // any tool has run and grown the conversation.
-      if (iter === 0 && activeTools.length > 0) {
-        console.warn('[tools] model rejected tools, retrying without them:', model);
+      // Only treat this as "the model rejects tools" when the server rejected
+      // the request UP FRONT with an HTTP error (e.g. 400 — the model's template
+      // lacks tool support). A mid-stream drop or network blip is NOT a tools
+      // problem: disabling tools for the whole session on a transient failure
+      // would silently leave the model with no tools until a reload (it would
+      // then insist it can't call any tools). streamChatRaw throws
+      // `HTTP <status>` before yielding anything on a non-OK response.
+      const httpRejection = err instanceof Error && err.message.startsWith('HTTP');
+      if (iter === 0 && activeTools.length > 0 && !receivedChunk && httpRejection) {
+        console.warn('[tools] server rejected tools, retrying without them:', model, (err as Error).message);
         toolUnsupportedModels.add(model);
         toolsDisabled = true;
         iter = -1; // loop will ++ back to 0
