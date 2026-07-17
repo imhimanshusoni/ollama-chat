@@ -8,17 +8,25 @@ import { useChatStore } from '../store/chatStore';
 import { useConnectionStore } from '../store/connectionStore';
 import { useSettingsStore } from '../store/settingsStore';
 
-// After the first exchange completes, summarize it into a real title in the
-// background. Fire-and-forget: on any failure the truncated-first-message
-// fallback title simply stays.
-function maybeGenerateTitle(chatId: string, baseUrl: string, model: string) {
+// Background meta calls (title, summary) share one controller so a new send
+// can abort them — on a single-slot Ollama instance they'd otherwise queue
+// ahead of the user's message and evict the chat's KV prompt cache.
+let metaController: AbortController | null = null;
+
+// After a completed exchange, summarize the first user/assistant pair into a
+// real title in the background — once per chat (titleGenerated). Not gated on
+// an exact message count, so a failed or aborted first exchange just retries
+// after the next completed one. Fire-and-forget: on any failure the
+// truncated-first-message fallback title simply stays.
+function maybeGenerateTitle(chatId: string, baseUrl: string, model: string, signal: AbortSignal) {
   const conv = useChatStore.getState().conversations.find((c) => c.id === chatId);
-  if (!conv || conv.titleGenerated || conv.messages.length !== 2) return;
-  const [userMsg, assistantMsg] = conv.messages;
-  if (assistantMsg.role !== 'assistant' || !assistantMsg.content) return;
+  if (!conv || conv.titleGenerated) return;
+  const userMsg = conv.messages.find((m) => m.role === 'user');
+  const assistantMsg = conv.messages.find((m) => m.role === 'assistant' && m.content);
+  if (!userMsg || !assistantMsg) return;
 
   const titleAtSend = conv.title;
-  void generateChatTitle(baseUrl, model, userMsg.content, assistantMsg.content).then((title) => {
+  void generateChatTitle(baseUrl, model, userMsg.content, assistantMsg.content, signal).then((title) => {
     if (!title) return;
     const now = useChatStore.getState().conversations.find((c) => c.id === chatId);
     // Skip if the chat is gone, already titled, or the title changed meanwhile.
@@ -31,7 +39,7 @@ function maybeGenerateTitle(chatId: string, baseUrl: string, model: string) {
 // that would be evicted into the rolling summary now, in the background, so
 // the next send doesn't lose it. Fire-and-forget; on failure the checkpoint
 // stays put and the next send degrades to a plain sliding window.
-function maybeSummarize(chatId: string, baseUrl: string, model: string, systemPrompt: string) {
+function maybeSummarize(chatId: string, baseUrl: string, model: string, systemPrompt: string, signal: AbortSignal) {
   const conv = useChatStore.getState().conversations.find((c) => c.id === chatId);
   if (!conv) return;
   const span = spanToSummarize(conv, conv.messages, systemPrompt);
@@ -42,7 +50,8 @@ function maybeSummarize(chatId: string, baseUrl: string, model: string, systemPr
     baseUrl,
     model,
     conv.contextSummary?.text,
-    conv.messages.slice(span.from, span.to)
+    conv.messages.slice(span.from, span.to),
+    signal
   ).then((text) => {
     if (!text) return;
     const now = useChatStore.getState().conversations.find((c) => c.id === chatId);
@@ -90,6 +99,10 @@ export function useStreamResponse() {
 
     // Add empty assistant message
     addMessage(activeId, { role: 'assistant', content: '' });
+
+    // A new send takes priority over any in-flight background meta calls.
+    metaController?.abort();
+    metaController = null;
 
     // Prepare streaming
     const controller = new AbortController();
@@ -147,17 +160,18 @@ export function useStreamResponse() {
         // Aborted before any token arrived → drop the empty placeholder so it
         // isn't persisted (and later sent to the model as an empty turn).
         removeLastMessageIfEmptyAssistant(activeId);
-      } else if (err instanceof Error) {
+      } else {
         const fallback = accumulatedRef.current || '*Could not get a response.*';
         updateLastMessage(activeId, fallback);
-        setLastMessageError(activeId, err.message);
+        setLastMessageError(activeId, err instanceof Error ? err.message : String(err));
       }
     } finally {
       setIsStreaming(false);
       controllerRef.current = null;
       if (completed) {
-        maybeGenerateTitle(activeId, baseUrl, currentModel);
-        maybeSummarize(activeId, baseUrl, currentModel, systemPromptText);
+        metaController = new AbortController();
+        maybeGenerateTitle(activeId, baseUrl, currentModel, metaController.signal);
+        maybeSummarize(activeId, baseUrl, currentModel, systemPromptText, metaController.signal);
       }
     }
   }, []);

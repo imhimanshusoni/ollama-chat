@@ -1,11 +1,13 @@
 import { streamChatRaw } from './ollama';
 import { buildSystemPrompt } from './prompts';
 import { searchWeb } from './webSearch';
+import { TOOL_RESULT_CAP } from '../utils/tokenEstimate';
 import type {
   Message,
   OllamaMessage,
   OllamaTool,
   OllamaToolCall,
+  ToolInvocation,
   ToolStreamEvent,
 } from '../types';
 
@@ -137,7 +139,19 @@ function toOllamaMessage(m: Message): OllamaMessage {
 // (tool_calls + tool results). Older ones collapse to a one-line note so the
 // model stays aware it already searched without paying the token cost.
 const FULL_TOOL_TURNS = 2;
-const TOOL_RESULT_CAP = 1500;
+
+// A cancelled call must not read as a failed search — the system prompt tells
+// the model never to repeat a query that returned nothing, so "(no result)"
+// would steer it away from ever re-searching the user's question.
+const CANCELLED_RESULT =
+  '(the user cancelled this call before it finished — run it again if still relevant)';
+
+function collapseToolTurn(m: Message, calls: ToolInvocation[]): OllamaMessage {
+  const notes = calls
+    .map((c) => `[Earlier, used ${c.name}(${JSON.stringify(c.arguments)})]`)
+    .join(' ');
+  return { role: 'assistant', content: `${notes}\n${m.content}`.trim() };
+}
 
 /**
  * Rebuilds the wire-format history from persisted messages. Previously tool
@@ -145,8 +159,14 @@ const TOOL_RESULT_CAP = 1500;
  * model had no record it ever called a tool (and would deny having searched).
  * A persisted assistant message with toolCalls now expands back into the
  * assistant(tool_calls) → tool → assistant(text) sequence Ollama expects.
+ *
+ * `plainText` renders tool turns as bracketed notes inside assistant content
+ * instead — for models whose template rejects tool_calls/tool messages.
  */
-export function buildOllamaHistory(messages: Message[]): OllamaMessage[] {
+export function buildOllamaHistory(
+  messages: Message[],
+  opts?: { plainText?: boolean }
+): OllamaMessage[] {
   const toolTurnIndices = messages
     .map((m, i) => (m.role === 'assistant' && m.toolCalls?.length ? i : -1))
     .filter((i) => i !== -1);
@@ -156,30 +176,32 @@ export function buildOllamaHistory(messages: Message[]): OllamaMessage[] {
   messages.forEach((m, i) => {
     const calls = m.role === 'assistant' ? m.toolCalls : undefined;
     if (!calls || calls.length === 0) {
+      // Never replay an empty assistant turn (e.g. aborted mid-thinking) —
+      // blank prior answers confuse small models' chat templates.
+      if (m.role === 'assistant' && !m.content) return;
       out.push(toOllamaMessage(m));
       return;
     }
-    if (expandSet.has(i)) {
-      out.push({
-        role: 'assistant',
-        content: '',
-        tool_calls: calls.map((c) => ({ function: { name: c.name, arguments: c.arguments } })),
-      });
-      for (const c of calls) {
-        const result = c.result ?? '(cancelled — no result)';
-        out.push({
-          role: 'tool',
-          tool_name: c.name,
-          content: result.length > TOOL_RESULT_CAP ? result.slice(0, TOOL_RESULT_CAP) + '…' : result,
-        });
-      }
-      if (m.content) out.push({ role: 'assistant', content: m.content });
-    } else {
-      const notes = calls
-        .map((c) => `[Earlier, used ${c.name}(${JSON.stringify(c.arguments)})]`)
-        .join(' ');
-      out.push({ role: 'assistant', content: `${notes}\n${m.content}`.trim() });
+    // A fully cancelled round (no results, no text) carries no information.
+    if (!m.content && calls.every((c) => c.result === undefined)) return;
+    if (opts?.plainText || !expandSet.has(i)) {
+      out.push(collapseToolTurn(m, calls));
+      return;
     }
+    out.push({
+      role: 'assistant',
+      content: '',
+      tool_calls: calls.map((c) => ({ function: { name: c.name, arguments: c.arguments } })),
+    });
+    for (const c of calls) {
+      const result = c.result ?? CANCELLED_RESULT;
+      out.push({
+        role: 'tool',
+        tool_name: c.name,
+        content: result.length > TOOL_RESULT_CAP ? result.slice(0, TOOL_RESULT_CAP) + '…' : result,
+      });
+    }
+    if (m.content) out.push({ role: 'assistant', content: m.content });
   });
   return out;
 }
@@ -194,24 +216,31 @@ export async function* streamChatWithTools(
 ): AsyncGenerator<ToolStreamEvent> {
   const toolCtx: ToolContext = { searchApiKey: opts?.searchApiKey ?? '', signal };
   let toolsDisabled = toolUnsupportedModels.has(model);
+  // Without a search key, web_search can only fail — don't offer it, and
+  // don't let the system prompt encourage it.
+  const searchAvailable = Boolean(toolCtx.searchApiKey.trim());
+  const availableTools = searchAvailable
+    ? tools
+    : tools.filter((t) => t.function.name !== 'web_search');
   const systemMessage = (toolsEnabled: boolean): OllamaMessage => ({
     role: 'system',
     content:
-      buildSystemPrompt(opts?.systemPromptOverride ?? '', toolsEnabled) +
+      buildSystemPrompt(opts?.systemPromptOverride ?? '', toolsEnabled, searchAvailable) +
       (opts?.contextSummary
         ? `\n\nSummary of the earlier conversation (for your memory):\n${opts.contextSummary}`
         : ''),
   });
-  const working: OllamaMessage[] = [
-    systemMessage(!toolsDisabled),
-    ...buildOllamaHistory(messages),
+  const buildWorking = (plainText: boolean): OllamaMessage[] => [
+    systemMessage(!plainText),
+    ...buildOllamaHistory(messages, { plainText }),
   ];
+  let working: OllamaMessage[] = buildWorking(toolsDisabled);
 
   for (let iter = 0; iter < MAX_TOOL_ITERATIONS; iter++) {
     if (signal.aborted) return;
     yield { type: 'reset' };
 
-    const activeTools = toolsDisabled ? [] : tools;
+    const activeTools = toolsDisabled ? [] : availableTools;
     let content = '';
     const toolCalls: OllamaToolCall[] = [];
     let receivedChunk = false;
@@ -250,9 +279,12 @@ export async function* streamChatWithTools(
         console.warn('[tools] server rejected tools, retrying without them:', model, (err as Error).message);
         toolUnsupportedModels.add(model);
         toolsDisabled = true;
-        // Rebuild the system message so the retry doesn't promise tools it
-        // no longer has.
-        working[0] = systemMessage(false);
+        // Rebuild the whole request: the system message must not promise
+        // tools, and replayed tool_calls/tool messages must flatten to plain
+        // text — a template that rejects tools can reject those shapes too.
+        // Safe to rebuild wholesale: this branch only runs on iter 0, before
+        // anything streamed.
+        working = buildWorking(true);
         iter = -1; // loop will ++ back to 0
         continue;
       }

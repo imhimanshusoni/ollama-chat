@@ -141,6 +141,11 @@ export async function* streamChatRaw(
     const thinking = j.message?.thinking;
     const toolCalls = j.message?.tool_calls;
     if (content || thinking || (toolCalls && toolCalls.length) || j.done) {
+      if (j.done && j.done_reason === 'length') {
+        // The reply hit the context ceiling mid-generation. If this shows up,
+        // raise OUTPUT_RESERVE in contextWindow.ts (1536 → 2048).
+        console.warn('[ollama] response truncated: done_reason=length');
+      }
       yield {
         content,
         thinking,

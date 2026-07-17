@@ -14,7 +14,17 @@ Search rules:
 - If a search returns nothing useful, rephrase ONCE; never repeat an identical query.
 - When your answer uses search results, cite the source URLs.`;
 
-export function buildSystemPrompt(override: string, toolsEnabled: boolean): string {
+// When no search API key is configured, web_search isn't offered at all — the
+// model must not be told about (or encouraged to use) a tool that can only fail.
+export const TIME_ONLY_GUIDANCE = `You have one tool:
+- get_current_time: use it whenever the current date or time matters.`;
+
+export function buildSystemPrompt(
+  override: string,
+  toolsEnabled: boolean,
+  searchEnabled = true
+): string {
   const base = override.trim() || DEFAULT_SYSTEM_PROMPT;
-  return toolsEnabled ? `${base}\n\n${TOOL_GUIDANCE}` : base;
+  if (!toolsEnabled) return base;
+  return `${base}\n\n${searchEnabled ? TOOL_GUIDANCE : TIME_ONLY_GUIDANCE}`;
 }

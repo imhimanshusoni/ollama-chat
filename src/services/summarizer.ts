@@ -50,7 +50,8 @@ export async function summarizeSpan(
   baseUrl: string,
   model: string,
   previousSummary: string | undefined,
-  span: Message[]
+  span: Message[],
+  signal?: AbortSignal
 ): Promise<string | null> {
   if (span.length === 0) return null;
   try {
@@ -63,7 +64,7 @@ export async function summarizeSpan(
       baseUrl,
       model,
       [{ role: 'user', content: prompt }],
-      { numPredict: 400 }
+      { numPredict: 400, signal }
     );
     const text = content.trim();
     return text || null;

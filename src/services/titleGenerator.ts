@@ -34,7 +34,8 @@ export async function generateChatTitle(
   baseUrl: string,
   model: string,
   userMsg: string,
-  assistantMsg: string
+  assistantMsg: string,
+  signal?: AbortSignal
 ): Promise<string | null> {
   const user = userMsg.slice(0, SLICE);
   const assistant = assistantMsg.slice(0, SLICE);
@@ -45,7 +46,7 @@ export async function generateChatTitle(
       baseUrl,
       model,
       [{ role: 'user', content: `${TITLE_PROMPT}USER: ${user}\nASSISTANT: ${assistant}` }],
-      { numPredict: 50 }
+      { numPredict: 50, signal }
     );
 
     // Lenient extraction: take the outermost {...} span, ignore surrounding prose.

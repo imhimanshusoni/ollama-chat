@@ -5,21 +5,11 @@ import { estimateMessageTokens, estimateTextTokens } from '../utils/tokenEstimat
 // Reserve room for the model's answer (and intra-turn tool results). If
 // done_reason "length" starts showing up in practice, bump to 2048.
 const OUTPUT_RESERVE = 1536;
-export const PROMPT_BUDGET = NUM_CTX - OUTPUT_RESERVE;
+const PROMPT_BUDGET = NUM_CTX - OUTPUT_RESERVE;
 
 // Headroom assumed for the upcoming user message when deciding whether to
 // pre-summarize in the background after a completed response.
 const NEXT_TURN_ALLOWANCE = 1000;
-
-export interface ContextResult {
-  history: Message[];
-  summaryText?: string;
-  // Index into `messages` where history begins.
-  windowStart: number;
-  // Messages between the summary checkpoint and the window start — the span
-  // a rolling summary needs to cover.
-  evicted: Message[];
-}
 
 interface ConversationContext {
   contextSummary?: ContextSummary;
@@ -27,8 +17,15 @@ interface ConversationContext {
 }
 
 /**
- * Per-message token estimates, scaled so that the span covered by Ollama's
- * last reported counts sums to the actual value (ground truth beats chars/4).
+ * Per-message token estimates, optionally corrected upward by Ollama's last
+ * reported counts.
+ *
+ * Only upward: prompt_eval_count counts NEWLY evaluated tokens, so with the
+ * model pinned (keep_alive -1) a KV-cached prefix makes the reported count
+ * far smaller than the real prompt — a downward correction would collapse
+ * every estimate toward zero and disable eviction entirely. An upward signal
+ * can't be produced by caching, so it's trustworthy: it means the tokenizer
+ * genuinely packs more tokens than chars/4 suggests (code, non-Latin text).
  */
 function calibratedEstimates(
   messages: Message[],
@@ -39,29 +36,34 @@ function calibratedEstimates(
   const est = messages.map(estimateMessageTokens);
   if (stats && stats.atMessageCount > checkpoint && stats.atMessageCount <= messages.length) {
     const spanSum = est.slice(checkpoint, stats.atMessageCount).reduce((a, b) => a + b, 0);
-    const actual = Math.max(1, stats.promptEvalCount + stats.evalCount - fixedTokens);
-    if (spanSum > 0) {
-      const scale = actual / spanSum;
+    const actual = stats.promptEvalCount + stats.evalCount - fixedTokens;
+    if (spanSum > 0 && actual > spanSum) {
+      const scale = Math.min(actual / spanSum, 3);
       for (let i = checkpoint; i < stats.atMessageCount; i++) est[i] = est[i] * scale;
     }
   }
   return est;
 }
 
-function windowFor(
+function computeWindow(
+  conv: ConversationContext,
   messages: Message[],
-  est: number[],
-  checkpoint: number,
-  fixedTokens: number,
+  systemPrompt: string,
   budget: number
-): number {
+): { checkpoint: number; windowStart: number } {
+  const summary = conv.contextSummary;
+  const checkpoint = Math.min(summary?.upToIndex ?? 0, messages.length);
+  const fixed =
+    estimateTextTokens(systemPrompt) + (summary ? estimateTextTokens(summary.text) : 0);
+  const est = calibratedEstimates(messages, checkpoint, fixed, conv.lastTokenStats);
+
   const n = messages.length;
-  const totalFromCheckpoint = fixedTokens + est.slice(checkpoint).reduce((a, b) => a + b, 0);
-  if (totalFromCheckpoint <= budget) return checkpoint;
+  const total = fixed + est.slice(checkpoint).reduce((a, b) => a + b, 0);
+  if (total <= budget) return { checkpoint, windowStart: checkpoint };
 
   // Walk backward from the newest message until the budget is exhausted.
   let start = n;
-  let acc = fixedTokens;
+  let acc = fixed;
   for (let i = n - 1; i >= checkpoint; i--) {
     if (acc + est[i] > budget) break;
     acc += est[i];
@@ -75,7 +77,7 @@ function windowFor(
     start = n - 1;
     while (start > checkpoint && messages[start].role !== 'user') start--;
   }
-  return start;
+  return { checkpoint, windowStart: start };
 }
 
 /**
@@ -87,19 +89,11 @@ export function buildContext(
   conv: ConversationContext,
   messages: Message[],
   systemPrompt: string
-): ContextResult {
-  const summary = conv.contextSummary;
-  const checkpoint = Math.min(summary?.upToIndex ?? 0, messages.length);
-  const fixed =
-    estimateTextTokens(systemPrompt) + (summary ? estimateTextTokens(summary.text) : 0);
-  const est = calibratedEstimates(messages, checkpoint, fixed, conv.lastTokenStats);
-  const windowStart = windowFor(messages, est, checkpoint, fixed, PROMPT_BUDGET);
-
+): { history: Message[]; summaryText?: string } {
+  const { windowStart } = computeWindow(conv, messages, systemPrompt, PROMPT_BUDGET);
   return {
     history: messages.slice(windowStart),
-    summaryText: summary?.text,
-    windowStart,
-    evicted: messages.slice(checkpoint, windowStart),
+    summaryText: conv.contextSummary?.text,
   };
 }
 
@@ -113,16 +107,10 @@ export function spanToSummarize(
   messages: Message[],
   systemPrompt: string
 ): { from: number; to: number } | null {
-  const summary = conv.contextSummary;
-  const checkpoint = Math.min(summary?.upToIndex ?? 0, messages.length);
-  const fixed =
-    estimateTextTokens(systemPrompt) + (summary ? estimateTextTokens(summary.text) : 0);
-  const est = calibratedEstimates(messages, checkpoint, fixed, conv.lastTokenStats);
-  const windowStart = windowFor(
+  const { checkpoint, windowStart } = computeWindow(
+    conv,
     messages,
-    est,
-    checkpoint,
-    fixed,
+    systemPrompt,
     PROMPT_BUDGET - NEXT_TURN_ALLOWANCE
   );
   return windowStart > checkpoint ? { from: checkpoint, to: windowStart } : null;
