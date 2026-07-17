@@ -1,5 +1,8 @@
 import { useState, useRef, useCallback } from 'react';
+import { buildContext, spanToSummarize } from '../services/contextWindow';
 import { streamChatWithTools } from '../services/ollamaTools';
+import { buildSystemPrompt } from '../services/prompts';
+import { summarizeSpan } from '../services/summarizer';
 import { generateChatTitle } from '../services/titleGenerator';
 import { useChatStore } from '../store/chatStore';
 import { useConnectionStore } from '../store/connectionStore';
@@ -21,6 +24,31 @@ function maybeGenerateTitle(chatId: string, baseUrl: string, model: string) {
     // Skip if the chat is gone, already titled, or the title changed meanwhile.
     if (!now || now.titleGenerated || now.title !== titleAtSend) return;
     useChatStore.getState().setTitle(chatId, title, { generated: true });
+  });
+}
+
+// If the next turn is likely to push the prompt over budget, fold the span
+// that would be evicted into the rolling summary now, in the background, so
+// the next send doesn't lose it. Fire-and-forget; on failure the checkpoint
+// stays put and the next send degrades to a plain sliding window.
+function maybeSummarize(chatId: string, baseUrl: string, model: string, systemPrompt: string) {
+  const conv = useChatStore.getState().conversations.find((c) => c.id === chatId);
+  if (!conv) return;
+  const span = spanToSummarize(conv, conv.messages, systemPrompt);
+  if (!span) return;
+
+  const checkpointAtSend = conv.contextSummary?.upToIndex ?? 0;
+  void summarizeSpan(
+    baseUrl,
+    model,
+    conv.contextSummary?.text,
+    conv.messages.slice(span.from, span.to)
+  ).then((text) => {
+    if (!text) return;
+    const now = useChatStore.getState().conversations.find((c) => c.id === chatId);
+    // Skip if the chat is gone or another summary landed meanwhile.
+    if (!now || (now.contextSummary?.upToIndex ?? 0) !== checkpointAtSend) return;
+    useChatStore.getState().setContextSummary(chatId, { upToIndex: span.to, text });
   });
 }
 
@@ -70,18 +98,26 @@ export function useStreamResponse() {
     setIsStreaming(true);
 
     let completed = false;
+    const { systemPromptOverride, searchApiKey } = useSettingsStore.getState();
+    // For token estimation in the context window (assume tools active).
+    const systemPromptText = buildSystemPrompt(systemPromptOverride, true);
+
     try {
-      const messages = useChatStore.getState().conversations
-        .find(c => c.id === activeId)?.messages ?? [];
+      const conv = useChatStore.getState().conversations.find(c => c.id === activeId);
+      const messages = conv?.messages ?? [];
 
-      // Exclude the empty assistant message we just added
-      const messagesToSend = messages.slice(0, -1);
+      // Exclude the empty assistant message we just added, then fit the
+      // history to the prompt budget (window + rolling summary).
+      const { history, summaryText } = buildContext(
+        conv ?? {},
+        messages.slice(0, -1),
+        systemPromptText
+      );
 
-      const { systemPromptOverride, searchApiKey } = useSettingsStore.getState();
-
-      for await (const ev of streamChatWithTools(baseUrl, currentModel, messagesToSend, reasoning, controller.signal, {
+      for await (const ev of streamChatWithTools(baseUrl, currentModel, history, reasoning, controller.signal, {
         systemPromptOverride,
         searchApiKey,
+        contextSummary: summaryText,
       })) {
         if (ev.type === 'reset') {
           accumulatedRef.current = '';
@@ -121,6 +157,7 @@ export function useStreamResponse() {
       controllerRef.current = null;
       if (completed) {
         maybeGenerateTitle(activeId, baseUrl, currentModel);
+        maybeSummarize(activeId, baseUrl, currentModel, systemPromptText);
       }
     }
   }, []);

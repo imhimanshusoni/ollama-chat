@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { Conversation, Message, TokenStats, ToolInvocation } from '../types';
+import type { ContextSummary, Conversation, Message, TokenStats, ToolInvocation } from '../types';
 import { generateId } from '../utils/generateId';
 
 interface ChatState {
@@ -17,6 +17,7 @@ interface ChatState {
   setTitle: (id: string, title: string, opts?: { generated?: boolean }) => void;
   setReasoning: (id: string, reasoning: boolean) => void;
   setTokenStats: (id: string, stats: TokenStats) => void;
+  setContextSummary: (id: string, summary: ContextSummary) => void;
   setLastMessageError: (id: string, error: string) => void;
   removeLastMessageIfEmptyAssistant: (id: string) => void;
 }
@@ -184,6 +185,14 @@ export const useChatStore = create<ChatState>()(
           set((state) => ({
             conversations: state.conversations.map((c) =>
               c.id === id ? { ...c, lastTokenStats: stats } : c
+            ),
+          }));
+        },
+
+        setContextSummary: (id, summary) => {
+          set((state) => ({
+            conversations: state.conversations.map((c) =>
+              c.id === id ? { ...c, contextSummary: summary } : c
             ),
           }));
         },

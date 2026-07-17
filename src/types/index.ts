@@ -24,6 +24,14 @@ export interface TokenStats {
   atMessageCount: number;
 }
 
+// Rolling summary checkpoint: `text` summarizes messages[0, upToIndex). On
+// send, history replays from the checkpoint with the summary injected into
+// the system message; the next compaction folds this summary into a new one.
+export interface ContextSummary {
+  upToIndex: number;
+  text: string;
+}
+
 export interface Conversation {
   id: string;
   title: string;
@@ -32,6 +40,7 @@ export interface Conversation {
   reasoning?: boolean; // per-chat reasoning setting (defaults off)
   titleGenerated?: boolean; // an LLM-summarized title has been set (never re-title)
   lastTokenStats?: TokenStats;
+  contextSummary?: ContextSummary;
 }
 
 export type ConnectionStatus = 'idle' | 'connecting' | 'connected' | 'error';
