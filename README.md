@@ -10,7 +10,11 @@ A fast, lightweight chat interface for self-hosted LLMs via [Ollama](https://oll
 
 **Syntax-Highlighted Code Blocks** -- Fenced code blocks with automatic language detection, a language label, always-dark styling for readability, and a one-click copy button.
 
-**Multi-Conversation Sidebar** -- Create, switch between, rename, and delete conversations. Chat history persists across sessions via `localStorage`.
+**Multi-Conversation Sidebar** -- Create, switch between, rename (double-click or pencil icon), and delete conversations. Chat history persists across sessions via `localStorage`.
+
+**Message Actions** -- Regenerate the last assistant response, or edit and resend any of your messages (the conversation continues from the edited point).
+
+**Connection Banner & Auto-Reconnect** -- When the server is unreachable (e.g., an expired tunnel URL), a banner under the top bar shows the error with Retry, Sync-from-GitHub, and paste-a-new-URL actions. The app retries automatically every 45 seconds and on window focus, re-fetching the published tunnel URL each time.
 
 **Dark / Light Theme** -- Toggle between dark and light modes from the sidebar. Dark is the default. Preference is persisted automatically.
 
@@ -91,7 +95,7 @@ npm run preview
 3. Click **Connect**. The panel will display the connection status and list available models.
 4. Select a model from the dropdown.
 
-The URL and selected model are persisted -- the app will silently attempt to reconnect on reload.
+The URL and selected model are persisted -- on reload the app shows a "Connecting…" state while it reconnects, and surfaces an error banner with recovery actions if the server can't be reached.
 
 ### Running Ollama on Google Colab (Free T4 GPU)
 

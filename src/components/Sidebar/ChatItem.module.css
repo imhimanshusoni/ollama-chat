@@ -38,7 +38,7 @@
   min-width: 0;
 }
 
-.deleteBtn {
+.iconBtn {
   opacity: 0;
   padding: var(--space-1);
   border: none;
@@ -55,10 +55,27 @@
   min-height: 1.5rem;
 }
 
-.chatItem:hover .deleteBtn {
+.chatItem:hover .iconBtn,
+.iconBtn:focus-visible {
   opacity: 1;
+}
+
+.iconBtn:hover {
+  color: var(--text-1);
 }
 
 .deleteBtn:hover {
   color: var(--error);
+}
+
+.renameInput {
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--text-1);
+  font-family: var(--font-sans);
+  font-size: var(--font-sm);
+  outline: none;
 }

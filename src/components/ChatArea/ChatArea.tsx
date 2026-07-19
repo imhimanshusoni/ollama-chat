@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, useCallback } from 'react';
 import { useChatStore } from '../../store/chatStore';
 import { MessageList } from './MessageList';
 import { EmptyState } from './EmptyState';
@@ -6,9 +6,11 @@ import styles from './ChatArea.module.css';
 
 interface Props {
   isStreaming: boolean;
+  onRegenerate?: () => void;
+  onEditResend?: (messageId: string, newText: string) => void;
 }
 
-export function ChatArea({ isStreaming }: Props) {
+export function ChatArea({ isStreaming, onRegenerate, onEditResend }: Props) {
   const conversations = useChatStore((s) => s.conversations);
   const activeId = useChatStore((s) => s.activeId);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -20,6 +22,13 @@ export function ChatArea({ isStreaming }: Props) {
 
   const convo = conversations.find((c) => c.id === activeId);
   const messages = convo?.messages || [];
+
+  // Mounted fresh per conversation (keyed on activeId in App) — open pinned
+  // to the bottom. DOM mutation only, before paint.
+  useLayoutEffect(() => {
+    const el = scrollRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, []);
 
   // --- Detect USER scroll via wheel/touch/keyboard ---
   useEffect(() => {
@@ -94,11 +103,13 @@ export function ChatArea({ isStreaming }: Props) {
             }, 150);
           }
         } else {
-          // Sentinel left view — cancel pending re-engage
+          // Sentinel left view — cancel pending re-engage and offer the
+          // jump-to-bottom button (shown only while streaming, see render).
           if (reengageTimer.current) {
             clearTimeout(reengageTimer.current);
             reengageTimer.current = null;
           }
+          setJumpVisible(true);
         }
       },
       { threshold: 0.1 }
@@ -111,26 +122,16 @@ export function ChatArea({ isStreaming }: Props) {
     };
   }, []);
 
-  // --- Show jump button when disengaged during streaming (polled) ---
-  useEffect(() => {
-    if (!isStreaming) {
-      setJumpVisible(false);
-      return;
-    }
-
-    const interval = setInterval(() => {
-      const shouldShow = !stickyRef.current && isStreaming;
-      setJumpVisible((prev) => (prev !== shouldShow ? shouldShow : prev));
-    }, 300);
-
-    return () => clearInterval(interval);
-  }, [isStreaming]);
+  // Jump button: the observer flags when the bottom sentinel leaves view;
+  // only show it while a reply is streaming.
+  const showJump = jumpVisible && isStreaming;
 
   // --- When new message is sent, always scroll to bottom ---
+  // The pin brings the sentinel back into view, so the observer clears
+  // jumpVisible on its own.
   useEffect(() => {
     if (messages.length > prevMsgCountRef.current) {
       stickyRef.current = true;
-      setJumpVisible(false);
       const el = scrollRef.current;
       if (el) el.scrollTop = el.scrollHeight;
     }
@@ -161,17 +162,22 @@ export function ChatArea({ isStreaming }: Props) {
         {messages.length === 0 ? (
           <EmptyState />
         ) : (
-          <MessageList messages={messages} isStreaming={isStreaming} />
+          <MessageList
+            messages={messages}
+            isStreaming={isStreaming}
+            onRegenerate={onRegenerate}
+            onEdit={onEditResend}
+          />
         )}
         <div ref={anchorRef} className={styles.anchor} aria-hidden="true" />
       </div>
       {/* Always in DOM — visibility controlled by CSS opacity for zero layout shift */}
       <button
-        className={`${styles.jumpBtn} ${jumpVisible ? styles.jumpVisible : ''}`}
+        className={`${styles.jumpBtn} ${showJump ? styles.jumpVisible : ''}`}
         onClick={handleJump}
         aria-label="Scroll to bottom"
         type="button"
-        tabIndex={jumpVisible ? 0 : -1}
+        tabIndex={showJump ? 0 : -1}
       >
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
           <polyline points="6 9 12 15 18 9" />

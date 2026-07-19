@@ -11,6 +11,7 @@ export function Sidebar() {
   const activeId = useChatStore((s) => s.activeId);
   const switchChat = useChatStore((s) => s.switchChat);
   const deleteChat = useChatStore((s) => s.deleteChat);
+  const renameChat = useChatStore((s) => s.renameChat);
   const sidebarOpen = useUiStore((s) => s.sidebarOpen);
   const setSidebarOpen = useUiStore((s) => s.setSidebarOpen);
 
@@ -45,6 +46,7 @@ export function Sidebar() {
               isActive={c.id === activeId}
               onSelect={() => handleSelect(c.id)}
               onDelete={() => deleteChat(c.id)}
+              onRename={(title) => renameChat(c.id, title)}
             />
           ))}
         </div>

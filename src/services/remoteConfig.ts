@@ -3,7 +3,10 @@ const MODEL_URL_RAW_URL =
 
 export async function fetchRemoteModelUrl(): Promise<string | null> {
   try {
-    const resp = await fetch(`${MODEL_URL_RAW_URL}?t=${Date.now()}`, { cache: 'no-store' });
+    const resp = await fetch(`${MODEL_URL_RAW_URL}?t=${Date.now()}`, {
+      cache: 'no-store',
+      signal: AbortSignal.timeout(10_000),
+    });
     if (!resp.ok) return null;
     const text = (await resp.text()).trim();
     if (!/^https?:\/\//.test(text)) return null;

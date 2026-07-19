@@ -2,11 +2,15 @@ import { memo, useState, useCallback, useEffect, useRef } from 'react';
 import type { Message as MessageType, ToolInvocation } from '../../types';
 import { MarkdownRenderer } from '../Markdown/MarkdownRenderer';
 import { escapeHtml } from '../../utils/escapeHtml';
+import { base64ImageDataUrl } from '../../utils/imageUtils';
 import styles from './Message.module.css';
 
 interface Props {
   message: MessageType;
-  isStreaming?: boolean;
+  isStreaming?: boolean; // this message is currently streaming in
+  actionsDisabled?: boolean; // any stream is in flight — hide/disable actions
+  onRegenerate?: () => void; // provided only for the last assistant message
+  onEdit?: (messageId: string, newText: string) => void; // user messages
 }
 
 function CopyButton({ content }: { content: string }) {
@@ -43,11 +47,11 @@ function CopyButton({ content }: { content: string }) {
 
 function ThinkingIndicator() {
   const [elapsed, setElapsed] = useState(0);
-  const startRef = useRef(Date.now());
 
   useEffect(() => {
+    const start = Date.now();
     const interval = setInterval(() => {
-      setElapsed(Math.floor((Date.now() - startRef.current) / 1000));
+      setElapsed(Math.floor((Date.now() - start) / 1000));
     }, 1000);
     return () => clearInterval(interval);
   }, []);
@@ -155,10 +159,42 @@ function Reasoning({ text, open, streaming }: { text: string; open: boolean; str
   );
 }
 
-function MessageInner({ message, isStreaming }: Props) {
+function RegenerateButton({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      className={`${styles.copyBtn} ${styles.regenBtn}`}
+      onClick={onClick}
+      type="button"
+      aria-label="Regenerate response"
+      title="Regenerate"
+    >
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <polyline points="23 4 23 10 17 10" />
+        <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
+      </svg>
+    </button>
+  );
+}
+
+function MessageInner({ message, isStreaming, actionsDisabled, onRegenerate, onEdit }: Props) {
   const isUser = message.role === 'user';
   const isWaiting = isStreaming && !message.content;
   const showCopy = !isUser && !isStreaming && message.content;
+  // Regenerate must also work on empty/errored replies, so no content check.
+  const showRegenerate = !isUser && !actionsDisabled && onRegenerate;
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState('');
+
+  const startEdit = useCallback(() => {
+    setDraft(message.content);
+    setEditing(true);
+  }, [message.content]);
+
+  const saveEdit = useCallback(() => {
+    if (!onEdit || !draft.trim()) return;
+    setEditing(false);
+    onEdit(message.id, draft);
+  }, [onEdit, draft, message.id]);
 
   return (
     <div className={`${styles.msg} ${isUser ? styles.user : styles.assistant}`}>
@@ -171,7 +207,7 @@ function MessageInner({ message, isStreaming }: Props) {
             {message.images.map((img, i) => (
               <img
                 key={i}
-                src={`data:image/png;base64,${img}`}
+                src={base64ImageDataUrl(img)}
                 alt="Attached"
                 className={styles.msgImage}
               />
@@ -189,7 +225,37 @@ function MessageInner({ message, isStreaming }: Props) {
           <ToolCalls calls={message.toolCalls} />
         )}
         {isUser ? (
-          <span dangerouslySetInnerHTML={{ __html: escapeHtml(message.content).replace(/\n/g, '<br>') }} />
+          editing ? (
+            <div className={styles.editForm}>
+              <textarea
+                className={styles.editTextarea}
+                value={draft}
+                onChange={(e) => setDraft(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Escape') setEditing(false);
+                }}
+                autoFocus
+              />
+              <div className={styles.editActions}>
+                <button
+                  className={styles.editActionBtn}
+                  onClick={() => setEditing(false)}
+                  type="button"
+                >
+                  Cancel
+                </button>
+                <button
+                  className={`${styles.editActionBtn} ${styles.editActionPrimary}`}
+                  onClick={saveEdit}
+                  type="button"
+                >
+                  Save & resend
+                </button>
+              </div>
+            </div>
+          ) : (
+            <span dangerouslySetInnerHTML={{ __html: escapeHtml(message.content).replace(/\n/g, '<br>') }} />
+          )
         ) : isWaiting ? (
           <ThinkingIndicator />
         ) : (
@@ -199,6 +265,20 @@ function MessageInner({ message, isStreaming }: Props) {
           <div className={styles.msgError}>Request failed: {message.error}</div>
         )}
         {showCopy && <CopyButton content={message.content} />}
+        {showRegenerate && <RegenerateButton onClick={onRegenerate} />}
+        {isUser && !editing && !actionsDisabled && onEdit && (
+          <button
+            className={styles.editBtn}
+            onClick={startEdit}
+            type="button"
+            aria-label="Edit message"
+            title="Edit & resend"
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" />
+            </svg>
+          </button>
+        )}
       </div>
     </div>
   );

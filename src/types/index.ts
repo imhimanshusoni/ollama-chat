@@ -7,13 +7,18 @@ export interface ToolInvocation {
 }
 
 export interface Message {
+  id: string; // stable identity for React keys and truncation targets
   role: 'user' | 'assistant';
   content: string;
   images?: string[]; // base64-encoded, no data URI prefix
   toolCalls?: ToolInvocation[];
-  thinking?: string; // reasoning trace, populated only when reasoning is enabled
+  thinking?: string; // reasoning trace, populated only when thinking is enabled
   error?: string; // stream failure shown inline under the message
 }
+
+// Per-conversation thinking depth. Maps to Ollama's `think` field: 'off' →
+// false, everything else passes through as the level string.
+export type ThinkLevel = 'off' | 'low' | 'medium' | 'high';
 
 // Ollama's token counts from the last completed response. `atMessageCount`
 // records messages.length at the time, so the counts are known to cover
@@ -37,7 +42,7 @@ export interface Conversation {
   title: string;
   messages: Message[];
   created: number;
-  reasoning?: boolean; // per-chat reasoning setting (defaults off)
+  thinkLevel?: ThinkLevel; // per-chat thinking depth (new chats default 'medium')
   titleGenerated?: boolean; // an LLM-summarized title has been set (never re-title)
   lastTokenStats?: TokenStats;
   contextSummary?: ContextSummary;

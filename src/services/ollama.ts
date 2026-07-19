@@ -14,12 +14,39 @@ const KEEP_ALIVE = -1;
 // Context window. Ollama's default (~4096) is quickly exhausted by a long
 // conversation: the prompt fills the window, leaving almost no room to
 // generate, so replies stop early with done_reason "length" (mid-sentence
-// cut-offs). Raising this gives long chats room for both history and answer.
-// gemma supports far larger; 8192 is a safe balance against Colab VRAM.
-export const NUM_CTX = 8192;
+// cut-offs). gemma4 supports up to 256K, and its sliding-window attention
+// (1024-token SWA on the 31B) keeps the KV cache small, so a large window is
+// cheap on VRAM. 32768 is a good balance for a ~24GB+ GPU; raise/lower to taste.
+export const NUM_CTX = 32768;
+
+// gemma4's recommended sampling (per the model card). Applied only to gemma4
+// variants on the chat path — other models keep their own defaults, and the
+// deterministic meta calls (title/summary) are left untouched.
+export function isGemma4(model: string): boolean {
+  return model.startsWith('gemma4');
+}
+const GEMMA4_SAMPLING = { temperature: 1.0, top_p: 0.95, top_k: 64 };
+
+// A stale trycloudflare.com hostname can resolve but never respond, hanging a
+// fetch forever. Bound how long we wait to establish a connection; streaming
+// bodies are exempt (the timeout covers connection + headers only).
+export const CONNECT_TIMEOUT_MS = 10_000;
+
+// Non-streaming meta calls (title, summary) only resolve after generation
+// finishes, which can be slow on Colab/Kaggle GPUs — bound them loosely, just
+// enough to reclaim a truly wedged connection.
+const META_TIMEOUT_MS = 120_000;
+
+// Ollama holds the /api/chat response headers until the first token is ready,
+// so a cold model (load + prompt eval on a Kaggle/Colab GPU) can legitimately
+// take minutes before any byte arrives. This is only a backstop against a
+// black-holed tunnel — the user can always hit Stop sooner.
+const STREAM_FIRST_BYTE_TIMEOUT_MS = 180_000;
 
 export async function fetchModels(baseUrl: string): Promise<string[]> {
-  const resp = await fetch(baseUrl + '/api/tags');
+  const resp = await fetch(baseUrl + '/api/tags', {
+    signal: AbortSignal.timeout(CONNECT_TIMEOUT_MS),
+  });
   if (!resp.ok) throw new Error('HTTP ' + resp.status);
   const data = await resp.json();
   return (data.models || []).map((m: { name: string }) => m.name);
@@ -39,7 +66,10 @@ export async function warmModel(baseUrl: string, model: string): Promise<void> {
       // Match streamChatRaw's num_ctx so warm-up loads the model at the same
       // context size — otherwise the first real message changes num_ctx and
       // forces a reload, defeating the warm-up.
+      // The response only arrives once the model finishes loading — give it
+      // the loose meta bound, not the connect one, so the keep_alive pin lands.
       body: JSON.stringify({ model, messages: [], keep_alive: KEEP_ALIVE, options: { num_ctx: NUM_CTX } }),
+      signal: AbortSignal.timeout(META_TIMEOUT_MS),
     });
   } catch {
     // ignore — warm-up is best-effort
@@ -72,7 +102,11 @@ export async function generateOnce(
         ...(opts?.numPredict ? { num_predict: opts.numPredict } : {}),
       },
     }),
-    signal: opts?.signal,
+    // TimeoutError (unlike a user abort's AbortError) surfaces as an error to
+    // the caller — keep that distinction.
+    signal: opts?.signal
+      ? AbortSignal.any([opts.signal, AbortSignal.timeout(META_TIMEOUT_MS)])
+      : AbortSignal.timeout(META_TIMEOUT_MS),
   });
   if (!resp.ok) throw new Error('HTTP ' + resp.status);
   const data: OllamaChatChunk = await resp.json();
@@ -94,7 +128,7 @@ export async function* streamChatRaw(
   model: string,
   messages: OllamaMessage[],
   tools: OllamaTool[],
-  think: boolean,
+  think: boolean | string,
   signal: AbortSignal
 ): AsyncGenerator<{
   content?: string;
@@ -105,27 +139,41 @@ export async function* streamChatRaw(
   promptEvalCount?: number;
   evalCount?: number;
 }> {
-  const resp = await fetch(baseUrl + '/api/chat', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      model,
-      messages,
-      stream: true,
-      keep_alive: KEEP_ALIVE,
-      options: { num_ctx: NUM_CTX },
-      // gemma-style reasoning models emit their chain-of-thought under
-      // message.thinking. Explicitly opt out unless the user enabled it, so
-      // the token budget goes to the actual answer.
-      think,
-      ...(tools.length ? { tools } : {}),
-    }),
-    signal,
-  });
+  // Bound the wait for the first byte only — once the stream is open, reads
+  // are governed solely by the caller's signal.
+  const timeoutCtrl = new AbortController();
+  const timer = setTimeout(
+    () => timeoutCtrl.abort(new DOMException('Connection timed out', 'TimeoutError')),
+    STREAM_FIRST_BYTE_TIMEOUT_MS
+  );
+
+  let resp: Response;
+  try {
+    resp = await fetch(baseUrl + '/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model,
+        messages,
+        stream: true,
+        keep_alive: KEEP_ALIVE,
+        options: { num_ctx: NUM_CTX, ...(isGemma4(model) ? GEMMA4_SAMPLING : {}) },
+        // gemma-style reasoning models emit their chain-of-thought under
+        // message.thinking. Explicitly opt out unless the user enabled it, so
+        // the token budget goes to the actual answer.
+        think,
+        ...(tools.length ? { tools } : {}),
+      }),
+      signal: AbortSignal.any([signal, timeoutCtrl.signal]),
+    });
+  } finally {
+    clearTimeout(timer);
+  }
 
   if (!resp.ok) throw new Error('HTTP ' + resp.status);
 
-  const reader = resp.body!.getReader();
+  if (!resp.body) throw new Error('Empty response body');
+  const reader = resp.body.getReader();
   const decoder = new TextDecoder();
   let buffer = '';
 
@@ -143,7 +191,7 @@ export async function* streamChatRaw(
     if (content || thinking || (toolCalls && toolCalls.length) || j.done) {
       if (j.done && j.done_reason === 'length') {
         // The reply hit the context ceiling mid-generation. If this shows up,
-        // raise OUTPUT_RESERVE in contextWindow.ts (1536 → 2048).
+        // raise OUTPUT_RESERVE in contextWindow.ts (currently 4096).
         console.warn('[ollama] response truncated: done_reason=length');
       }
       yield {
@@ -158,18 +206,24 @@ export async function* streamChatRaw(
     }
   };
 
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    buffer += decoder.decode(value, { stream: true });
-    const lines = buffer.split('\n');
-    buffer = lines.pop()!;
-    for (const line of lines) {
-      yield* emit(line);
+  // finally releases the reader's lock even when the consumer exits the
+  // generator early (break/return/throw), so the stream isn't left locked.
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop()!;
+      for (const line of lines) {
+        yield* emit(line);
+      }
     }
-  }
 
-  if (buffer.trim()) {
-    yield* emit(buffer);
+    if (buffer.trim()) {
+      yield* emit(buffer);
+    }
+  } finally {
+    reader.releaseLock();
   }
 }

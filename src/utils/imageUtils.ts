@@ -51,6 +51,19 @@ export function fileToBase64(file: File): Promise<string> {
   });
 }
 
+/**
+ * Rebuild a data URL for a stored base64 image (kept without its data-URI
+ * prefix) by sniffing the format from the encoded magic bytes.
+ */
+export function base64ImageDataUrl(b64: string): string {
+  let mime = 'image/png';
+  if (b64.startsWith('/9j/')) mime = 'image/jpeg';
+  else if (b64.startsWith('iVBOR')) mime = 'image/png';
+  else if (b64.startsWith('R0lGOD')) mime = 'image/gif';
+  else if (b64.startsWith('UklGR')) mime = 'image/webp';
+  return `data:${mime};base64,${b64}`;
+}
+
 export function fileToDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();

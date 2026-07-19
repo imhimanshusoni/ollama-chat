@@ -1,8 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useConnectionStore } from '../../store/connectionStore';
 import { useUiStore } from '../../store/uiStore';
-import { fetchModels, warmModel } from '../../services/ollama';
-import { fetchRemoteModelUrl } from '../../services/remoteConfig';
+import { connect, normalizeUrl, syncAndConnect } from '../../services/connection';
 import { IconButton } from '../ui/IconButton';
 import styles from './SettingsPanel.module.css';
 
@@ -11,14 +10,9 @@ export function SettingsPanel() {
   const setSettingsOpen = useUiStore((s) => s.setSettingsOpen);
   const {
     baseUrl,
-    currentModel,
     models,
     status,
     isManualOverride,
-    setBaseUrl,
-    setCurrentModel,
-    setModels,
-    setStatus,
     clearManualOverride,
   } = useConnectionStore();
   const [urlValue, setUrlValue] = useState(baseUrl);
@@ -34,42 +28,21 @@ export function SettingsPanel() {
     if (!inputFocusedRef.current) setUrlValue(baseUrl);
   }, [baseUrl]);
 
-  const connectTo = async (rawUrl: string, opts?: { manual?: boolean }) => {
-    let url = rawUrl.trim().replace(/\/+$/, '');
+  const handleConnect = async () => {
+    const url = normalizeUrl(urlValue);
     if (!url) return;
-    if (!/^https?:\/\//.test(url)) url = 'https://' + url;
     setUrlValue(url);
     setConnectText('Connecting...');
-    setStatus('connecting');
-
-    try {
-      const modelList = await fetchModels(url);
-      setBaseUrl(url, opts);
-      setModels(modelList);
-      if (modelList.length > 0) {
-        const saved = currentModel;
-        const model = modelList.includes(saved) ? saved : modelList[0];
-        setCurrentModel(model);
-        void warmModel(url, model); // preload so the first message is fast
-      }
-      setStatus('connected');
-      setConnectText('Reconnect');
-    } catch (err) {
-      setStatus('error', err instanceof Error ? err.message : 'Connection failed');
-      setConnectText('Retry');
-    }
+    const ok = await connect(url, { manual: true });
+    setConnectText(ok ? 'Reconnect' : 'Retry');
   };
-
-  const handleConnect = () => connectTo(urlValue, { manual: true });
 
   const handleSyncFromGithub = async () => {
     setSyncing(true);
     try {
-      const remoteUrl = await fetchRemoteModelUrl();
-      if (remoteUrl) {
-        clearManualOverride();
-        await connectTo(remoteUrl);
-      }
+      clearManualOverride();
+      const ok = await syncAndConnect();
+      setConnectText(ok ? 'Reconnect' : 'Retry');
     } finally {
       setSyncing(false);
     }
@@ -132,7 +105,7 @@ export function SettingsPanel() {
         )}
         {status === 'connected' && (
           <p className={styles.fieldHint}>
-            Pick your model and toggle reasoning from the controls next to the message box.
+            Pick your model and thinking level from the controls next to the message box.
           </p>
         )}
       </div>

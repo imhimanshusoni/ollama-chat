@@ -2,9 +2,11 @@ import type { ContextSummary, Message, TokenStats } from '../types';
 import { NUM_CTX } from './ollama';
 import { estimateMessageTokens, estimateTextTokens } from '../utils/tokenEstimate';
 
-// Reserve room for the model's answer (and intra-turn tool results). If
-// done_reason "length" starts showing up in practice, bump to 2048.
-const OUTPUT_RESERVE = 1536;
+// Reserve room for the model's answer (and intra-turn tool results). With
+// gemma4 thinking on by default, a turn emits a reasoning trace plus the
+// answer before `done`, so this is generous. Bump further if done_reason
+// "length" shows up in practice.
+const OUTPUT_RESERVE = 4096;
 const PROMPT_BUDGET = NUM_CTX - OUTPUT_RESERVE;
 
 // Headroom assumed for the upcoming user message when deciding whether to

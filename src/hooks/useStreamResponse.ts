@@ -6,6 +6,7 @@ import { summarizeSpan } from '../services/summarizer';
 import { generateChatTitle } from '../services/titleGenerator';
 import { useChatStore } from '../store/chatStore';
 import { useConnectionStore } from '../store/connectionStore';
+import { generateId } from '../utils/generateId';
 
 // Background meta calls (title, summary) share one controller so a new send
 // can abort them — on a single-slot Ollama instance they'd otherwise queue
@@ -65,39 +66,31 @@ export function useStreamResponse() {
   const controllerRef = useRef<AbortController | null>(null);
   const accumulatedRef = useRef('');
 
-  const send = useCallback(async (text: string, images?: string[]) => {
+  // Core streaming path. Assumes the conversation ends with the user message
+  // to answer: appends the assistant placeholder and streams into it. Shared
+  // by send, regenerate, and editAndResend.
+  const streamReply = useCallback(async (activeId: string) => {
     const {
-      activeId,
       conversations,
       addMessage,
       updateLastMessage,
       appendThinking,
       addToolCall,
       setToolResult,
-      setTitle,
       setTokenStats,
       setLastMessageError,
       removeLastMessageIfEmptyAssistant,
     } = useChatStore.getState();
     const { baseUrl, currentModel } = useConnectionStore.getState();
 
-    if (!activeId || !baseUrl || !currentModel) return;
+    if (!baseUrl || !currentModel) return;
 
-    // Reasoning is stored per-conversation.
-    const reasoning = conversations.find((c) => c.id === activeId)?.reasoning ?? false;
-
-    // Add user message (with optional images)
-    addMessage(activeId, { role: 'user', content: text, ...(images ? { images } : {}) });
-
-    // Set title from first message if empty
-    const conversation = useChatStore.getState().conversations.find(c => c.id === activeId);
-    if (conversation && (!conversation.title || conversation.title === 'New Chat')) {
-      const title = text.slice(0, 60) + (text.length > 60 ? '...' : '');
-      setTitle(activeId, title);
-    }
+    // Thinking depth is stored per-conversation; 'off' maps to think:false.
+    const level = conversations.find((c) => c.id === activeId)?.thinkLevel ?? 'off';
+    const think = level === 'off' ? false : level;
 
     // Add empty assistant message
-    addMessage(activeId, { role: 'assistant', content: '' });
+    addMessage(activeId, { id: generateId(), role: 'assistant', content: '' });
 
     // A new send takes priority over any in-flight background meta calls.
     metaController?.abort();
@@ -125,7 +118,7 @@ export function useStreamResponse() {
         systemPromptText
       );
 
-      for await (const ev of streamChatWithTools(baseUrl, currentModel, history, reasoning, controller.signal, {
+      for await (const ev of streamChatWithTools(baseUrl, currentModel, history, think, controller.signal, {
         contextSummary: summaryText,
       })) {
         if (ev.type === 'reset') {
@@ -160,6 +153,14 @@ export function useStreamResponse() {
         const fallback = accumulatedRef.current || '*Could not get a response.*';
         updateLastMessage(activeId, fallback);
         setLastMessageError(activeId, err instanceof Error ? err.message : String(err));
+        // A network-level failure (not an HTTP error — the server answered
+        // those) means the tunnel died mid-chat: surface it in the connection
+        // banner so auto-retry kicks in.
+        if (err instanceof TypeError || (err instanceof Error && err.name === 'TimeoutError')) {
+          useConnectionStore
+            .getState()
+            .setStatus('error', 'Lost connection to the model server');
+        }
       }
     } finally {
       setIsStreaming(false);
@@ -172,9 +173,65 @@ export function useStreamResponse() {
     }
   }, []);
 
+  const send = useCallback(async (text: string, images?: string[]) => {
+    const { activeId, addMessage, setTitle } = useChatStore.getState();
+    const { baseUrl, currentModel } = useConnectionStore.getState();
+
+    if (!activeId || !baseUrl || !currentModel) return;
+
+    // Add user message (with optional images)
+    addMessage(activeId, { id: generateId(), role: 'user', content: text, ...(images ? { images } : {}) });
+
+    // Set title from first message if empty
+    const conversation = useChatStore.getState().conversations.find((c) => c.id === activeId);
+    if (conversation && (!conversation.title || conversation.title === 'New Chat')) {
+      const title = text.slice(0, 60) + (text.length > 60 ? '...' : '');
+      setTitle(activeId, title);
+    }
+
+    await streamReply(activeId);
+  }, [streamReply]);
+
+  // Re-run generation for the last assistant reply: drop it and stream a
+  // fresh answer to the user message that preceded it. Also the recovery
+  // path for replies that ended in an error.
+  const regenerate = useCallback(async () => {
+    if (controllerRef.current) return; // already streaming
+    const { activeId, conversations, truncateFrom } = useChatStore.getState();
+    if (!activeId) return;
+
+    const messages = conversations.find((c) => c.id === activeId)?.messages ?? [];
+    const last = messages[messages.length - 1];
+    const prev = messages[messages.length - 2];
+    if (!last || last.role !== 'assistant' || !prev || prev.role !== 'user') return;
+
+    truncateFrom(activeId, last.id);
+    await streamReply(activeId);
+  }, [streamReply]);
+
+  // Replace a user message with edited text, dropping everything after it,
+  // and stream a fresh reply. Images from the original message are kept
+  // (in-session only — they don't survive reloads, images aren't persisted).
+  const editAndResend = useCallback(async (messageId: string, newText: string) => {
+    if (controllerRef.current) return; // already streaming
+    const text = newText.trim();
+    if (!text) return;
+    const { activeId, conversations, truncateFrom, addMessage } = useChatStore.getState();
+    if (!activeId) return;
+
+    const messages = conversations.find((c) => c.id === activeId)?.messages ?? [];
+    const original = messages.find((m) => m.id === messageId);
+    if (!original || original.role !== 'user') return;
+    const images = original.images;
+
+    truncateFrom(activeId, messageId);
+    addMessage(activeId, { id: generateId(), role: 'user', content: text, ...(images ? { images } : {}) });
+    await streamReply(activeId);
+  }, [streamReply]);
+
   const abort = useCallback(() => {
     controllerRef.current?.abort();
   }, []);
 
-  return { send, isStreaming, abort };
+  return { send, regenerate, editAndResend, isStreaming, abort };
 }

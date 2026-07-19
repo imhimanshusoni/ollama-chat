@@ -1,0 +1,102 @@
+.banner {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-sidebar);
+  font-size: var(--font-sm);
+  color: var(--text-2);
+}
+
+.connecting {
+  flex-direction: row;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: var(--radius-full);
+  background: var(--warning);
+  flex-shrink: 0;
+}
+
+.dotError {
+  background: var(--error);
+}
+
+.message {
+  color: var(--text-1);
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-left: auto;
+  flex-wrap: wrap;
+}
+
+.actionBtn {
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--bg-input);
+  color: var(--text-1);
+  font-family: var(--font-sans);
+  font-size: var(--font-xs);
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s var(--ease);
+}
+
+.actionBtn:hover { background: var(--bg-hover); }
+.actionBtn:disabled { cursor: default; opacity: 0.6; }
+
+.linkBtn {
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--accent);
+  font-family: var(--font-sans);
+  font-size: var(--font-xs);
+  font-weight: 500;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.linkBtn:hover { color: var(--accent-hover); }
+
+.urlRow {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.urlInput {
+  flex: 1;
+  min-width: 0;
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--bg-input);
+  color: var(--text-1);
+  font-family: var(--font-sans);
+  font-size: var(--font-xs);
+  outline: none;
+}
+
+.urlInput:focus {
+  border-color: var(--border-focus);
+  box-shadow: 0 0 0 3px var(--accent-subtle);
+}
+
+.urlInput::placeholder { color: var(--text-3); }

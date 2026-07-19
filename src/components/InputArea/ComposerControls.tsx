@@ -3,12 +3,24 @@ import { useConnectionStore } from '../../store/connectionStore';
 import { useChatStore } from '../../store/chatStore';
 import { warmModel } from '../../services/ollama';
 import { useClickOutside } from '../../hooks/useClickOutside';
-import { Toggle } from '../ui/Toggle';
+import type { ThinkLevel } from '../../types';
 import styles from './ComposerControls.module.css';
 
 // Strip the tag suffix for a compact chip label: "gemma4:12b-it-q4_K_M" -> "gemma4".
 function shortModel(name: string): string {
   return name.split(':')[0] || name;
+}
+
+const THINK_LEVELS: { value: ThinkLevel; label: string }[] = [
+  { value: 'off', label: 'Off' },
+  { value: 'low', label: 'Low' },
+  { value: 'medium', label: 'Med' },
+  { value: 'high', label: 'High' },
+];
+
+// Compact chip label for the current thinking level.
+function thinkChipLabel(level: ThinkLevel): string {
+  return level === 'off' ? 'Fast' : `Think: ${THINK_LEVELS.find((l) => l.value === level)?.label}`;
 }
 
 export function ComposerControls() {
@@ -21,10 +33,10 @@ export function ComposerControls() {
   const models = useConnectionStore((s) => s.models);
   const currentModel = useConnectionStore((s) => s.currentModel);
   const setCurrentModel = useConnectionStore((s) => s.setCurrentModel);
-  // Reasoning is per-conversation, so each chat remembers its own setting.
+  // Thinking level is per-conversation, so each chat remembers its own setting.
   const activeId = useChatStore((s) => s.activeId);
-  const reasoning = useChatStore((s) => s.conversations.find((c) => c.id === s.activeId)?.reasoning ?? false);
-  const setConversationReasoning = useChatStore((s) => s.setReasoning);
+  const thinkLevel = useChatStore((s) => s.conversations.find((c) => c.id === s.activeId)?.thinkLevel ?? 'off');
+  const setThinkLevel = useChatStore((s) => s.setThinkLevel);
 
   const pickModel = useCallback((m: string) => {
     setCurrentModel(m);
@@ -67,16 +79,28 @@ export function ComposerControls() {
 
           <div className={styles.divider} />
 
-          <div className={styles.reasoningRow}>
+          <div className={styles.thinkRow}>
             <div className={styles.reasoningText}>
-              <span className={styles.reasoningTitle}>Reasoning</span>
-              <span className={styles.reasoningHint}>Thinks first. Slower, more thorough.</span>
+              <span className={styles.reasoningTitle}>Thinking</span>
+              <span className={styles.reasoningHint}>Higher thinks more. Slower, more thorough.</span>
             </div>
-            <Toggle
-              checked={reasoning}
-              onChange={(on) => { if (activeId) setConversationReasoning(activeId, on); }}
-              label="Toggle reasoning"
-            />
+            <div className={styles.segments} role="radiogroup" aria-label="Thinking level">
+              {THINK_LEVELS.map(({ value, label }) => {
+                const active = value === thinkLevel;
+                return (
+                  <button
+                    key={value}
+                    type="button"
+                    role="radio"
+                    aria-checked={active}
+                    className={`${styles.segment} ${active ? styles.segmentActive : ''}`}
+                    onClick={() => { if (activeId) setThinkLevel(activeId, value); }}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
       )}
@@ -90,8 +114,8 @@ export function ComposerControls() {
       >
         <span className={styles.chipModel}>{currentModel ? shortModel(currentModel) : 'No model'}</span>
         <span className={styles.chipSep} aria-hidden="true">·</span>
-        <span className={reasoning ? styles.chipModeOn : styles.chipMode}>
-          {reasoning ? 'Reasoning' : 'Fast'}
+        <span className={thinkLevel !== 'off' ? styles.chipModeOn : styles.chipMode}>
+          {thinkChipLabel(thinkLevel)}
         </span>
         <svg className={`${styles.chevron} ${open ? styles.chevronUp : ''}`} width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
           <polyline points="6 9 12 15 18 9" />

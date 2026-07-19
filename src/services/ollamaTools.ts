@@ -209,7 +209,7 @@ export async function* streamChatWithTools(
   baseUrl: string,
   model: string,
   messages: Message[],
-  think: boolean,
+  think: boolean | string,
   signal: AbortSignal,
   opts?: { contextSummary?: string }
 ): AsyncGenerator<ToolStreamEvent> {
