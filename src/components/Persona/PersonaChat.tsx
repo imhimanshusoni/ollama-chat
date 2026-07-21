@@ -6,6 +6,7 @@ import { useConnectionStore } from '../../store/connectionStore';
 import { usePersonaStream } from '../../hooks/usePersonaStream';
 import { hasEmbedModel, DEFAULT_EMBED_MODEL } from '../../services/ollama';
 import { syncExampleBank } from '../../services/personaExamples';
+import { PersonaAvatar } from './PersonaAvatar';
 import styles from './PersonaChat.module.css';
 
 const isTouchDevice = () =>
@@ -86,7 +87,7 @@ export function PersonaChat() {
             <polyline points="15 18 9 12 15 6" />
           </svg>
         </button>
-        <span className={styles.headerAvatar} aria-hidden="true">{avatar}</span>
+        <PersonaAvatar avatar={avatar} className={styles.headerAvatar} />
         <div className={styles.headerText}>
           <span className={styles.headerName}>{name}</span>
           <span className={styles.headerStatus}>{isStreaming ? 'typing…' : 'online'}</span>
@@ -108,7 +109,7 @@ export function PersonaChat() {
       <div className={styles.messages} ref={scrollRef}>
         {messages.length === 0 ? (
           <div className={styles.empty}>
-            <div className={styles.emptyAvatar} aria-hidden="true">{avatar}</div>
+            <PersonaAvatar avatar={avatar} className={styles.emptyAvatar} />
             <div className={styles.emptyName}>{name}</div>
             <div className={styles.emptyHint}>Say hi 👋</div>
           </div>
@@ -118,7 +119,7 @@ export function PersonaChat() {
             const isTyping = !isUser && !m.content && isStreaming;
             return (
               <div key={m.id} className={`${styles.row} ${isUser ? styles.rowUser : styles.rowThem}`}>
-                {!isUser && <span className={styles.bubbleAvatar} aria-hidden="true">{avatar}</span>}
+                {!isUser && <PersonaAvatar avatar={avatar} className={styles.bubbleAvatar} />}
                 <div className={`${styles.bubble} ${isUser ? styles.bubbleUser : styles.bubbleThem}`}>
                   {isTyping ? (
                     <span className={styles.dots}><span /><span /><span /></span>

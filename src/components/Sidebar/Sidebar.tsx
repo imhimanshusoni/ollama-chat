@@ -3,6 +3,7 @@ import { useChatStore } from '../../store/chatStore';
 import { useUiStore } from '../../store/uiStore';
 import { useDocStore } from '../../store/docStore';
 import { usePersonaStore } from '../../store/personaStore';
+import { PersonaAvatar } from '../Persona/PersonaAvatar';
 import { SidebarHeader } from './SidebarHeader';
 import { ChatItem } from './ChatItem';
 import { SidebarFooter } from './SidebarFooter';
@@ -61,7 +62,7 @@ export function Sidebar() {
           className={`${styles.personaEntry} ${personaOpen ? styles.personaEntryActive : ''}`}
           onClick={openPersona}
         >
-          <span className={styles.personaAvatar} aria-hidden="true">{persona?.avatar ?? '🙂'}</span>
+          <PersonaAvatar avatar={persona?.avatar ?? '🙂'} className={styles.personaAvatar} />
           <span className={styles.personaLabel}>Chat with {persona?.name ?? 'someone'}</span>
         </button>
 
