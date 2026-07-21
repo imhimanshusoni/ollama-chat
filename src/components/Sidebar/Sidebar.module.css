@@ -59,6 +59,46 @@
   outline-offset: 2px;
 }
 
+/* ---- Persona space entry ---- */
+.personaEntry {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: calc(100% - 2 * var(--space-2));
+  margin: 0 var(--space-2) var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border: none;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--text-1);
+  font-size: var(--font-sm);
+  font-weight: 500;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s var(--ease);
+}
+
+.personaEntry:hover { background: var(--bg-hover); }
+.personaEntryActive { background: var(--bg-active); }
+
+.personaAvatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: var(--radius-full);
+  background: var(--bg-hover);
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+
+.personaLabel {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .sidebarChats {
   flex: 1;
   overflow-y: auto;

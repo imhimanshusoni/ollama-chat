@@ -2,6 +2,7 @@ import { useCallback } from 'react';
 import { useChatStore } from '../../store/chatStore';
 import { useUiStore } from '../../store/uiStore';
 import { useDocStore } from '../../store/docStore';
+import { usePersonaStore } from '../../store/personaStore';
 import { SidebarHeader } from './SidebarHeader';
 import { ChatItem } from './ChatItem';
 import { SidebarFooter } from './SidebarFooter';
@@ -15,6 +16,14 @@ export function Sidebar() {
   const renameChat = useChatStore((s) => s.renameChat);
   const sidebarOpen = useUiStore((s) => s.sidebarOpen);
   const setSidebarOpen = useUiStore((s) => s.setSidebarOpen);
+  const personaOpen = useUiStore((s) => s.personaOpen);
+  const setPersonaOpen = useUiStore((s) => s.setPersonaOpen);
+  const persona = usePersonaStore((s) => s.persona);
+
+  const openPersona = useCallback(() => {
+    setPersonaOpen(true);
+    if (window.innerWidth <= 768) setSidebarOpen(false);
+  }, [setPersonaOpen, setSidebarOpen]);
 
   const handleSelect = useCallback((id: string) => {
     switchChat(id);
@@ -46,6 +55,15 @@ export function Sidebar() {
         aria-label="Chat sidebar"
       >
         <SidebarHeader />
+
+        <button
+          type="button"
+          className={`${styles.personaEntry} ${personaOpen ? styles.personaEntryActive : ''}`}
+          onClick={openPersona}
+        >
+          <span className={styles.personaAvatar} aria-hidden="true">{persona?.avatar ?? '🙂'}</span>
+          <span className={styles.personaLabel}>Chat with {persona?.name ?? 'someone'}</span>
+        </button>
 
         <div className={styles.sidebarChats}>
           {conversations.map((c) => (

@@ -4,6 +4,7 @@ import { useStreamResponse } from './hooks/useStreamResponse';
 import { useChatStore } from './store/chatStore';
 import { useUiStore } from './store/uiStore';
 import { useDocStore } from './store/docStore';
+import { usePersonaStore } from './store/personaStore';
 import { syncAndConnect } from './services/connection';
 import { Sidebar } from './components/Sidebar/Sidebar';
 import { TopBar } from './components/TopBar/TopBar';
@@ -12,12 +13,14 @@ import { ConnectionBanner } from './components/ConnectionBanner/ConnectionBanner
 import { InputArea } from './components/InputArea/InputArea';
 import { SettingsPanel } from './components/Settings/SettingsPanel';
 import { SettingsOverlay } from './components/Settings/SettingsOverlay';
+import { PersonaChat } from './components/Persona/PersonaChat';
 import styles from './App.module.css';
 
 export default function App() {
   const { send, regenerate, editAndResend, isStreaming, abort } = useStreamResponse();
   const settingsOpen = useUiStore((s) => s.settingsOpen);
   const setSettingsOpen = useUiStore((s) => s.setSettingsOpen);
+  const personaOpen = useUiStore((s) => s.personaOpen);
   const conversations = useChatStore((s) => s.conversations);
   const activeId = useChatStore((s) => s.activeId);
   const newChat = useChatStore((s) => s.newChat);
@@ -40,22 +43,29 @@ export default function App() {
   useEffect(() => {
     void syncAndConnect();
     void useDocStore.getState().hydrate().then(() => useDocStore.getState().pruneOrphans());
+    void usePersonaStore.getState().load();
   }, []);
 
   return (
     <div className={styles.layout}>
       <Sidebar />
       <div className={styles.main}>
-        <TopBar />
-        <ConnectionBanner />
-        {/* Keyed per conversation so scroll/sticky state resets on switch */}
-        <ChatArea
-          key={activeId ?? 'none'}
-          isStreaming={isStreaming}
-          onRegenerate={regenerate}
-          onEditResend={editAndResend}
-        />
-        <InputArea onSend={send} onStop={abort} isStreaming={isStreaming} />
+        {personaOpen ? (
+          <PersonaChat />
+        ) : (
+          <>
+            <TopBar />
+            <ConnectionBanner />
+            {/* Keyed per conversation so scroll/sticky state resets on switch */}
+            <ChatArea
+              key={activeId ?? 'none'}
+              isStreaming={isStreaming}
+              onRegenerate={regenerate}
+              onEditResend={editAndResend}
+            />
+            <InputArea onSend={send} onStop={abort} isStreaming={isStreaming} />
+          </>
+        )}
       </div>
       <SettingsOverlay open={settingsOpen} onClose={() => setSettingsOpen(false)} />
       <SettingsPanel />
