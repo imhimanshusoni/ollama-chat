@@ -54,11 +54,13 @@ export function PersonaChat() {
 
   const handleSend = useCallback(() => {
     const text = value.trim();
-    if (!text || notConnected || isStreaming) return;
+    // Guard everything send() requires BEFORE clearing the box, so a typed
+    // message is never silently lost on an early return.
+    if (!text || notConnected || isStreaming || !persona) return;
     void send(text);
     setValue('');
     reset();
-  }, [value, notConnected, isStreaming, send, reset]);
+  }, [value, notConnected, isStreaming, persona, send, reset]);
 
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     if (touch) return;
@@ -67,11 +69,6 @@ export function PersonaChat() {
       handleSend();
     }
   }, [handleSend, touch]);
-
-  const lastIsEmptyAssistant =
-    messages.length > 0 &&
-    messages[messages.length - 1].role === 'assistant' &&
-    !messages[messages.length - 1].content;
 
   return (
     <div className={styles.space}>
@@ -131,15 +128,6 @@ export function PersonaChat() {
               </div>
             );
           })
-        )}
-        {/* Trailing typing indicator handled inline via the empty assistant bubble above. */}
-        {!lastIsEmptyAssistant && isStreaming && (
-          <div className={`${styles.row} ${styles.rowThem}`}>
-            <span className={styles.bubbleAvatar} aria-hidden="true">{avatar}</span>
-            <div className={`${styles.bubble} ${styles.bubbleThem}`}>
-              <span className={styles.dots}><span /><span /><span /></span>
-            </div>
-          </div>
         )}
       </div>
 

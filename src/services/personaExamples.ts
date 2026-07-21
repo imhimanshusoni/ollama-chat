@@ -61,13 +61,19 @@ function pairExamples(examples: OllamaMessage[]): ExamplePair[] {
   return pairs;
 }
 
-// Small stable string hash (djb2) — identifies a bank version.
-function hashPairs(pairs: ExamplePair[]): string {
-  const s = JSON.stringify(pairs);
+// Small stable string hash (djb2) — identifies a bank version. Includes the
+// embed model, so switching models forces a re-embed (vectors from different
+// models aren't comparable).
+function hashPairs(pairs: ExamplePair[], embedModel: string): string {
+  const s = embedModel + '|' + JSON.stringify(pairs);
   let h = 5381;
   for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0;
   return String(h >>> 0);
 }
+
+// Dedupe concurrent syncs of the same bank (open-effect + first send) so we
+// don't re-embed the whole bank twice on a single-slot server.
+let syncInFlight: { hash: string; promise: Promise<void> } | null = null;
 
 export function isBankReady(): boolean {
   return bank.length > 0;
@@ -85,8 +91,23 @@ export async function syncExampleBank(
   embedModel: string
 ): Promise<void> {
   const pairs = pairExamples(persona.examples);
-  const hash = hashPairs(pairs);
+  const hash = hashPairs(pairs, embedModel);
   if (bankHash === hash && bank.length > 0) return; // already current in memory
+  if (syncInFlight && syncInFlight.hash === hash) return syncInFlight.promise; // in progress
+
+  const promise = doSyncExampleBank(pairs, hash, baseUrl, embedModel).finally(() => {
+    if (syncInFlight?.hash === hash) syncInFlight = null;
+  });
+  syncInFlight = { hash, promise };
+  return promise;
+}
+
+async function doSyncExampleBank(
+  pairs: ExamplePair[],
+  hash: string,
+  baseUrl: string,
+  embedModel: string
+): Promise<void> {
   if (pairs.length === 0) {
     bank = [];
     bankHash = hash;
@@ -102,7 +123,7 @@ export async function syncExampleBank(
     if (bank.length > 0) return;
   }
 
-  // Re-embed the whole bank (persona changed or first run).
+  // Re-embed the whole bank (persona or embed model changed, or first run).
   const docPrefix = embedPrefix(embedModel, 'document');
   const records: StoredExample[] = [];
   for (let i = 0; i < pairs.length; i += EMBED_BATCH) {

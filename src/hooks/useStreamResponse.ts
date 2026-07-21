@@ -6,6 +6,7 @@ import { summarizeSpan } from '../services/summarizer';
 import { generateChatTitle } from '../services/titleGenerator';
 import { DEFAULT_EMBED_MODEL } from '../services/ollama';
 import { buildDocContext } from '../services/docContext';
+import { cancelPersonaBackground } from './usePersonaStream';
 import { useChatStore } from '../store/chatStore';
 import { useConnectionStore } from '../store/connectionStore';
 import { useDocStore } from '../store/docStore';
@@ -97,9 +98,12 @@ export function useStreamResponse() {
     // Add empty assistant message
     addMessage(activeId, { id: generateId(), role: 'assistant', content: '' });
 
-    // A new send takes priority over any in-flight background meta calls.
+    // A new send takes priority over any in-flight background meta calls —
+    // including the persona space's memory extraction, so it can't queue ahead
+    // of this reply on a single-slot server.
     metaController?.abort();
     metaController = null;
+    cancelPersonaBackground();
 
     // Prepare streaming
     const controller = new AbortController();

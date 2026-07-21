@@ -5,6 +5,11 @@ import type { Persona } from '../services/persona';
 import { fetchPersona } from '../services/persona';
 import { DEFAULT_STYLE, type PersonaStyle } from '../services/personaStyle';
 
+// Cap how many messages are persisted to localStorage so a long-running persona
+// chat can't grow the store without bound (the wire payload is separately capped
+// in usePersonaStream). In-memory state keeps everything for the session.
+const PERSIST_MSG_CAP = 100;
+
 interface PersonaState {
   persona: Persona | null; // fetched config (cached to localStorage as a fallback)
   messages: Message[]; // the ongoing persona conversation
@@ -68,11 +73,13 @@ export const usePersonaStore = create<PersonaState>()(
     }),
     {
       name: 'ollama-persona-store',
-      // Persist the conversation, memory, style, and last-known persona (so the
-      // name/avatar still show if GitHub is unreachable on next load).
+      // Persist the (capped) conversation, memory, style, and last-known persona.
+      // The example bank is dropped from the persisted persona — it's re-fetched
+      // and lives in IndexedDB — keeping the store small (name/avatar/prompt stay
+      // so the header + offline sending still work).
       partialize: (state) => ({
-        persona: state.persona,
-        messages: state.messages,
+        persona: state.persona ? { ...state.persona, examples: [] } : null,
+        messages: state.messages.slice(-PERSIST_MSG_CAP),
         memory: state.memory,
         style: state.style,
       }),

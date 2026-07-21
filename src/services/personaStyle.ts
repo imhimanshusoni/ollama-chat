@@ -1,14 +1,10 @@
-// Persona style control — the fix for "model uses an emoji, apologizes, then
-// redrafts" and similar constraint-violation artifacts.
+// Persona style control — fixes "model uses an emoji, apologizes, then redrafts"
+// and enforces style directives deterministically.
 //
-// Root cause: the emoji-heavy few-shot examples contradict a "no emoji"
-// instruction, so the model wavers and its self-correction leaks into the reply.
-// Fix in three layers:
-//   L1 — detect style directives → structured state (this file + personaStore)
-//   L2 — make conditioning consistent (strip emoji from injected examples) so
-//        the examples stop contradicting the instruction (usePersonaStream)
-//   L3 — deterministically clean the buffered reply (cleanPersonaReply): drop
-//        self-correction meta-notes, collapse redrafts, enforce emoji-off.
+// Design note (post-review): detection is deliberately narrow. Self-correction
+// cleanup only triggers on EMOJI-specific cues (not bare "sorry"/"wait"), so a
+// normal casual reply like "I wanted to come (sorry I missed it) how was it?"
+// is never mangled. Emoji enforcement and redraft dedup are the guarantees.
 
 export interface PersonaStyle {
   emoji: boolean;
@@ -20,90 +16,98 @@ export const DEFAULT_STYLE: PersonaStyle = { emoji: true };
 
 export function detectStyleDirective(text: string): Partial<PersonaStyle> | null {
   const t = text.toLowerCase();
-  const mentionsEmoji = /emoji|emojis|emoticon/.test(t);
-  if (mentionsEmoji) {
-    const off = /\b(no|without|stop|dont|don't|avoid|band|mat|nahi|off)\b/.test(t) || /without emoji/.test(t);
-    const on = /\b(use|add|chalega|theek|ok|fine|allowed|kar sakti|kar sakte)\b/.test(t);
-    if (off && !on) return { emoji: false };
-    if (on && !off) return { emoji: true };
-    // "no emoji" phrased as adjacency, e.g. "emoji band kar"
-    if (/emoji.{0,12}(band|mat|nahi|stop|off)/.test(t)) return { emoji: false };
-    if (/(band|mat|nahi|stop|no|without).{0,12}emoji/.test(t)) return { emoji: false };
-  }
+  if (!/emoji|emoticon/.test(t)) return null;
+
+  // Don't turn emojis off if the message is positive about them.
+  const positive = /\b(love|like|great|nice|cute|good|awesome|keep|more|zyada)\b/.test(t);
+
+  // Primary signal: negation/positive adjacent to "emoji", not a bag of words.
+  const off =
+    /\b(no|without|stop|dont|don'?t|avoid|bina)\b[\w\s]{0,10}emoji/.test(t) ||
+    /emoji\w*[\w\s]{0,10}\b(band|mat|nahi|stop|off|kam|hata|nahi chahiye)\b/.test(t) ||
+    /without emoji/.test(t);
+  const on =
+    /\b(use|add|chahiye|wapas)\b[\w\s]{0,10}emoji/.test(t) ||
+    /emoji\w*[\w\s]{0,10}\b(chalega|theek|ok|fine|allowed|kar sakti|use kar)\b/.test(t);
+
+  if (on) return { emoji: true };
+  if (off && !positive) return { emoji: false };
   return null;
 }
 
 // --- Emoji stripping -------------------------------------------------------
 
-// Matches emoji, ZWJ sequences, skin-tone modifiers, variation selectors,
-// keycaps, and regional-indicator flag pairs.
+// Emoji, ZWJ sequences, skin-tone modifiers, variation selectors, keycaps, and
+// regional-indicator flag pairs.
 const EMOJI_RE =
   /(?:\p{Extended_Pictographic}(?:️)?(?:‍\p{Extended_Pictographic}(?:️)?)*|[\u{1F1E6}-\u{1F1FF}]{2}|[\u{1F3FB}-\u{1F3FF}]|[⃣️‍])/gu;
 
+// Strip emoji, replacing with a space so adjacent words don't merge
+// ("haan😄chalo" → "haan chalo"), then tidy spacing.
 export function stripEmoji(text: string): string {
   return text
-    .replace(EMOJI_RE, '')
+    .replace(EMOJI_RE, ' ')
     .replace(/[ \t]{2,}/g, ' ')
     .replace(/[ \t]+([.,!?…])/g, '$1')
+    .replace(/^[ \t]+/gm, '')
     .replace(/[ \t]+$/gm, '')
     .trim();
 }
 
 // --- L3: clean a buffered reply -------------------------------------------
 
-// Markers that identify the model's self-correction meta-commentary.
-const META =
-  "wait|oops|sorry|no\\s*emoji|without\\s*emoji|phir se|let me try|try properly|habit hai|control nahi|galti|aa gaya|ab nahi (aayega|karungi|karunga)";
-const META_PAREN = new RegExp(`\\(([^)]*(?:${META})[^)]*)\\)`, 'gi');
-// A standalone line that is essentially just an emoji self-correction note.
-const META_NOTE_SRC =
-  'no\\s*emoji|without\\s*emoji|let me try|try properly|emoji .*aa gaya|phir se .*aa gaya|control nahi|ab nahi (?:aayega|karungi|karunga)';
-const META_NOTE = new RegExp(`^\\s*\\(?\\s*(?:${META_NOTE_SRC})`, 'i');
+// Cues that identify an EMOJI self-correction specifically (not generic apology).
+const CORRECTION =
+  'no\\s*emoji|without emoji|emoji[\\w\\s]{0,20}(aa gaya|phir se|use kiya|hata|nikaal)|phir se[\\w\\s]{0,20}(emoji|aa gaya)|let me try (again|properly|once more)|try (again|properly)|abhi toh maine use kiya|control nahi|ab nahi (aayega|karungi|karunga)|meri galti';
+const CORRECTION_PAREN = new RegExp(`\\(([^)]*(?:${CORRECTION})[^)]*)\\)`, 'gi');
+const CORRECTION_LINE = new RegExp(`^\\s*\\(?\\s*(?:oops|arre sorry|sorry)?[\\s,.]*(?:${CORRECTION})`, 'i');
+
+const MIN_DEDUP_LEN = 15; // only dedupe substantial segments
 
 function normKey(s: string): string {
   return stripEmoji(s).toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
 }
 
-/**
- * Deterministically clean a full (buffered) persona reply so self-correction
- * artifacts never reach the UI. Handles the exact bug: "<draft 😂> (wait… let
- * me try properly) <clean redraft>" → keeps only the clean redraft.
- */
 export function cleanPersonaReply(text: string, style: PersonaStyle): string {
   let t = text.replace(/\r/g, '').trim();
 
-  // 1) If the model self-corrected, its final intended message is whatever
-  //    comes AFTER the last meta-note. Keep that, drop the flawed draft + note.
-  const parens = [...t.matchAll(META_PAREN)];
+  // 1) Emoji self-correction in parens → keep only the redraft after the last one.
+  const parens = [...t.matchAll(CORRECTION_PAREN)];
   if (parens.length) {
     const last = parens[parens.length - 1];
     const tail = t.slice((last.index ?? 0) + last[0].length).trim();
     if (tail.length >= 3) t = tail;
   }
 
-  // 2) Remove any remaining inline meta-parentheticals.
-  t = t.replace(META_PAREN, '').trim();
+  // 2) Remove any remaining emoji self-correction parentheticals.
+  t = t.replace(CORRECTION_PAREN, '').trim();
 
-  // 3) Segment cleanup: drop standalone meta-note lines, then dedupe repeated
-  //    segments keeping the LAST (the model's final redraft).
+  // 3) Drop short standalone emoji self-correction note lines.
   let segs = t
     .split(/\n+/)
     .map((s) => s.trim())
     .filter(Boolean)
-    .filter((s) => !(META_NOTE.test(s) && s.length < 80));
+    .filter((s) => !(CORRECTION_LINE.test(s) && s.length < 80));
+
+  // 4) Dedupe only substantial near-identical segments (the draft/redraft pair),
+  //    keeping the LAST — short lines and emoji-only lines are never collapsed.
+  const keyed = segs.map((s) => ({ s, k: normKey(s) }));
   const lastIdx = new Map<string, number>();
-  segs.forEach((s, i) => lastIdx.set(normKey(s), i));
-  segs = segs.filter((s, i) => lastIdx.get(normKey(s)) === i);
+  keyed.forEach((o, i) => {
+    if (o.k.length >= MIN_DEDUP_LEN) lastIdx.set(o.k, i);
+  });
+  segs = keyed.filter((o, i) => o.k.length < MIN_DEDUP_LEN || lastIdx.get(o.k) === i).map((o) => o.s);
+
   t = segs.join('\n').trim();
 
-  // 4) Enforce the emoji preference deterministically (the hard guarantee).
+  // 5) Enforce the emoji preference deterministically.
   if (!style.emoji) t = stripEmoji(t);
 
-  return t || stripEmoji(text.trim());
+  return t || (style.emoji ? text.trim() : stripEmoji(text.trim()));
 }
 
-// L2 helper: strip emoji from the few-shot examples so they stop contradicting
-// an active "no emoji" preference.
+// L2 helper: strip emoji from few-shot examples so they stop contradicting an
+// active "no emoji" preference.
 export function applyStyleToExamples<T extends { content: string }>(
   examples: T[],
   style: PersonaStyle

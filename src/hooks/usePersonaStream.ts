@@ -20,6 +20,14 @@ const STATIC_FALLBACK = 16; // examples used when retrieval isn't available (no 
 // in-flight one — on a single-slot Ollama it must not queue ahead of the reply.
 let memoryController: AbortController | null = null;
 
+// Abort a pending persona background task (memory extraction). Called by the
+// normal chat path too, so a persona memory call can't queue ahead of a normal
+// reply on the single-slot server.
+export function cancelPersonaBackground(): void {
+  memoryController?.abort();
+  memoryController = null;
+}
+
 function toWire(examples: OllamaMessage[]): OllamaMessage[] {
   return examples.map((m) => ({ role: m.role, content: m.content }));
 }
