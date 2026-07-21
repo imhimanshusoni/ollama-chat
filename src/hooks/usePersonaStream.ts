@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback } from 'react';
 import { streamChatRaw, hasEmbedModel, DEFAULT_EMBED_MODEL } from '../services/ollama';
 import { syncExampleBank, retrieveExamples } from '../services/personaExamples';
-import { updatePersonaMemory } from '../services/personaMemory';
+import { updatePersonaMemory, isMeaningfulMemory } from '../services/personaMemory';
 import { usePersonaStore } from '../store/personaStore';
 import { useConnectionStore } from '../store/connectionStore';
 import { generateId } from '../utils/generateId';
@@ -68,7 +68,9 @@ export function usePersonaStream() {
 
     const systemContent =
       persona.systemPrompt +
-      (memory ? `\n\nThings you remember about them (from past chats):\n${memory}` : '');
+      (isMeaningfulMemory(memory)
+        ? `\n\nThings you remember about them (from past chats):\n${memory}`
+        : '');
 
     // Exclude the empty assistant placeholder, keep the recent tail.
     const history = usePersonaStore.getState().messages.slice(0, -1).slice(-MAX_HISTORY);
