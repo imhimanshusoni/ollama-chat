@@ -37,6 +37,14 @@ interface DocState {
   documents: RagDocument[]; // mirror of IndexedDB metadata (source of truth is IndexedDB)
   progress: Record<string, { done: number; total: number }>; // docId -> embed progress
   hydrate: () => Promise<void>;
+  // Delete documents (and their chunks) no longer referenced by any
+  // conversation, so files live only as long as the chat that uses them.
+  // Pass `candidateIds` (e.g. a deleted chat's docIds) to check only those —
+  // the immediate delete-on-chat-delete path. Omit to sweep everything — the
+  // startup safety net. Both are reference-checked, so a doc still used by
+  // another chat is kept. Only run the full sweep at startup, when no document
+  // is staged in the composer (staged docs aren't referenced by a chat yet).
+  pruneOrphans: (candidateIds?: string[]) => Promise<void>;
   // Ingest a file end to end. Resolves with the new document id (final status
   // may be 'ready' or 'error'). Small docs go inline (no embedding needed);
   // large docs are chunked, embedded, and summarized. `onStart` fires with the
@@ -61,6 +69,25 @@ export const useDocStore = create<DocState>((set) => ({
       set({ documents });
     } catch (err) {
       console.warn('[docStore] hydrate failed', err);
+    }
+  },
+
+  pruneOrphans: async (candidateIds) => {
+    try {
+      const referenced = new Set(
+        useChatStore.getState().conversations.flatMap((c) => c.docIds ?? [])
+      );
+      const candidates = candidateIds
+        ? candidateIds.map((id) => ({ id }))
+        : await listDocuments();
+      const orphanIds = candidates.map((d) => d.id).filter((id) => !referenced.has(id));
+      for (const id of orphanIds) await deleteDocument(id);
+      if (orphanIds.length) {
+        const gone = new Set(orphanIds);
+        set((state) => ({ documents: state.documents.filter((d) => !gone.has(d.id)) }));
+      }
+    } catch (err) {
+      console.warn('[docStore] pruneOrphans failed', err);
     }
   },
 

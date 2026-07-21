@@ -35,10 +35,11 @@ export default function App() {
 
   // Auto-sync the tunnel URL + reconnect on load; status flows
   // connecting → connected/error so failures are visible in the UI.
-  // Also load the RAG document library from IndexedDB.
+  // Also load RAG documents from IndexedDB and prune any orphaned by deleted
+  // chats (startup only, before anything is staged in the composer).
   useEffect(() => {
     void syncAndConnect();
-    void useDocStore.getState().hydrate();
+    void useDocStore.getState().hydrate().then(() => useDocStore.getState().pruneOrphans());
   }, []);
 
   return (

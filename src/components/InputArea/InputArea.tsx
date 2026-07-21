@@ -7,7 +7,7 @@ import { isSupportedDoc } from '../../utils/docUtils';
 import { DEFAULT_EMBED_MODEL } from '../../services/ollama';
 import { SendButton } from './SendButton';
 import { ComposerControls } from './ComposerControls';
-import { DocAttach } from './DocAttach';
+import { AttachMenu } from './AttachMenu';
 import { DocChips } from './DocChips';
 import styles from './InputArea.module.css';
 
@@ -17,26 +17,30 @@ interface Props {
   isStreaming: boolean;
 }
 
+// Standard cap on images per message.
+const MAX_IMAGES = 5;
+
+interface AttachedImage {
+  base64: string; // sent to the model (no data-URI prefix)
+  dataUrl: string; // for the local preview thumbnail
+}
+
 const isTouchDevice = () =>
   typeof window !== 'undefined' && window.matchMedia?.('(pointer: coarse)').matches;
 
 export function InputArea({ onSend, onStop, isStreaming }: Props) {
   const [value, setValue] = useState('');
   const [touch] = useState(isTouchDevice);
-  const [imageBase64, setImageBase64] = useState<string | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
-  // Documents staged for the NEXT message. On send they become part of the
-  // message (a pill on the bubble) and join the conversation's context set, then
-  // clear from here — the composer is never a permanent doc pin.
+  const [images, setImages] = useState<AttachedImage[]>([]);
+  // Documents staged for the NEXT message. On send they join the conversation's
+  // context and clear from here (they show as a pill on the message).
   const [pendingDocIds, setPendingDocIds] = useState<string[]>([]);
   const [dragOver, setDragOver] = useState(false);
   const ref = useRef<HTMLTextAreaElement>(null);
-  const fileRef = useRef<HTMLInputElement>(null);
   const { resize, reset } = useAutoResize(ref);
   const status = useConnectionStore((s) => s.status);
   const baseUrl = useConnectionStore((s) => s.baseUrl);
   const ingest = useDocStore((s) => s.ingest);
-  const documents = useDocStore((s) => s.documents);
   const notConnected = status !== 'connected';
 
   const addPending = useCallback((id: string) => {
@@ -46,54 +50,54 @@ export function InputArea({ onSend, onStop, isStreaming }: Props) {
     setPendingDocIds((p) => p.filter((x) => x !== id));
   }, []);
 
-  // Stage a document for the next message: ingest it and add its id to pending
-  // as soon as the record exists (so its progress chip shows immediately).
   const attachDoc = useCallback((file: File) => {
     void ingest(file, baseUrl, DEFAULT_EMBED_MODEL, addPending);
   }, [ingest, baseUrl, addPending]);
 
-  const attachImage = useCallback(async (file: File) => {
-    const { valid, error } = validateImage(file);
-    if (!valid) {
-      alert(error);
-      return;
+  // Validate/convert/resize a batch of image files, then append up to the cap.
+  const attachImages = useCallback(async (files: File[]) => {
+    const prepared: AttachedImage[] = [];
+    for (const file of files) {
+      const { valid, error } = validateImage(file);
+      if (!valid) {
+        alert(error);
+        continue;
+      }
+      const p = await prepareImage(file); // HEIC→JPEG + resize
+      const [base64, dataUrl] = await Promise.all([fileToBase64(p), fileToDataUrl(p)]);
+      prepared.push({ base64, dataUrl });
     }
-    // Converts HEIC to JPEG + resizes if needed
-    const prepared = await prepareImage(file);
-    const [base64, dataUrl] = await Promise.all([
-      fileToBase64(prepared),
-      fileToDataUrl(prepared),
-    ]);
-    setImageBase64(base64);
-    setImagePreview(dataUrl);
+    if (prepared.length === 0) return;
+    setImages((prev) => {
+      const room = MAX_IMAGES - prev.length;
+      if (room <= 0) {
+        alert(`You can attach up to ${MAX_IMAGES} images.`);
+        return prev;
+      }
+      if (prepared.length > room) {
+        alert(`Only ${room} more image${room !== 1 ? 's' : ''} can be attached (max ${MAX_IMAGES}).`);
+      }
+      return [...prev, ...prepared.slice(0, room)];
+    });
   }, []);
 
-  const removeImage = useCallback(() => {
-    setImageBase64(null);
-    setImagePreview(null);
-    if (fileRef.current) fileRef.current.value = '';
+  const removeImage = useCallback((index: number) => {
+    setImages((prev) => prev.filter((_, i) => i !== index));
   }, []);
-
-  // Block send while a staged doc is still ingesting, so the first answer isn't
-  // generated before its content is available (matches Claude's upload gating).
-  const pendingBusy = pendingDocIds.some((id) => {
-    const d = documents.find((doc) => doc.id === id);
-    return d ? d.status !== 'ready' && d.status !== 'error' : false;
-  });
 
   const handleSend = useCallback(() => {
     const text = value.trim();
-    if ((!text && !imageBase64) || notConnected || isStreaming || pendingBusy) return;
+    if ((!text && images.length === 0) || notConnected || isStreaming) return;
     onSend(
       text || 'What is in this image?',
-      imageBase64 ? [imageBase64] : undefined,
+      images.length ? images.map((i) => i.base64) : undefined,
       pendingDocIds.length ? pendingDocIds : undefined
     );
     setValue('');
-    removeImage();
+    setImages([]);
     setPendingDocIds([]);
     reset();
-  }, [value, imageBase64, notConnected, isStreaming, pendingBusy, pendingDocIds, onSend, removeImage, reset]);
+  }, [value, images, notConnected, isStreaming, pendingDocIds, onSend, reset]);
 
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     // On touch devices there's no easy Shift key, so Enter inserts a
@@ -105,23 +109,21 @@ export function InputArea({ onSend, onStop, isStreaming }: Props) {
     }
   }, [handleSend, touch]);
 
-  const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) attachImage(file);
-  }, [attachImage]);
-
   const handlePaste = useCallback((e: ClipboardEvent) => {
     const items = e.clipboardData?.items;
     if (!items) return;
+    const imageFiles: File[] = [];
     for (const item of items) {
       if (item.type.startsWith('image/')) {
-        e.preventDefault();
         const file = item.getAsFile();
-        if (file) attachImage(file);
-        return;
+        if (file) imageFiles.push(file);
       }
     }
-  }, [attachImage]);
+    if (imageFiles.length) {
+      e.preventDefault();
+      void attachImages(imageFiles);
+    }
+  }, [attachImages]);
 
   const handleDragOver = useCallback((e: DragEvent) => {
     e.preventDefault();
@@ -137,11 +139,13 @@ export function InputArea({ onSend, onStop, isStreaming }: Props) {
     setDragOver(false);
     const files = e.dataTransfer.files;
     if (!files) return;
+    const imageFiles: File[] = [];
     for (const file of files) {
-      if (file.type.startsWith('image/')) attachImage(file);
+      if (file.type.startsWith('image/')) imageFiles.push(file);
       else if (isSupportedDoc(file)) attachDoc(file);
     }
-  }, [attachImage, attachDoc]);
+    if (imageFiles.length) void attachImages(imageFiles);
+  }, [attachImages, attachDoc]);
 
   return (
     <div
@@ -151,49 +155,36 @@ export function InputArea({ onSend, onStop, isStreaming }: Props) {
       onDrop={handleDrop}
     >
       <DocChips pendingDocIds={pendingDocIds} onRemove={removePending} />
-      {imagePreview && (
+      {images.length > 0 && (
         <div className={styles.previewRow}>
-          <div className={styles.preview}>
-            <img src={imagePreview} alt="Attached" className={styles.previewImg} />
-            <button
-              className={styles.previewRemove}
-              onClick={removeImage}
-              type="button"
-              aria-label="Remove image"
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
-              </svg>
-            </button>
-          </div>
+          {images.map((img, i) => (
+            <div key={i} className={styles.preview}>
+              <img src={img.dataUrl} alt="Attached" className={styles.previewImg} />
+              <button
+                className={styles.previewRemove}
+                onClick={() => removeImage(i)}
+                type="button"
+                aria-label="Remove image"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                  <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+              </button>
+            </div>
+          ))}
         </div>
       )}
       <div className={`${styles.wrap} ${dragOver ? styles.dragOver : ''}`}>
-        <DocAttach pendingDocIds={pendingDocIds} onAdd={addPending} onRemove={removePending} />
-        <button
-          className={styles.attachBtn}
-          onClick={() => fileRef.current?.click()}
-          type="button"
-          disabled={notConnected}
-          aria-label="Attach image"
-          title="Attach image"
-        >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
-          </svg>
-        </button>
-        <input
-          ref={fileRef}
-          type="file"
-          accept="image/*,.heic,.heif"
-          onChange={handleFileChange}
-          className={styles.fileInput}
-          tabIndex={-1}
+        <AttachMenu
+          pendingDocIds={pendingDocIds}
+          onAddDoc={addPending}
+          onImageFiles={attachImages}
+          imagesRemaining={MAX_IMAGES - images.length}
         />
         <textarea
           ref={ref}
           className={styles.input}
-          placeholder={imageBase64 ? 'Add a message or just send the image...' : 'Message Ollama...'}
+          placeholder={images.length ? 'Add a message or just send the image...' : 'Message Ollama...'}
           rows={1}
           value={value}
           onChange={(e) => { setValue(e.target.value); resize(); }}
@@ -204,7 +195,7 @@ export function InputArea({ onSend, onStop, isStreaming }: Props) {
         />
         <SendButton
           isStreaming={isStreaming}
-          disabled={isStreaming ? false : notConnected || pendingBusy || (!value.trim() && !imageBase64)}
+          disabled={isStreaming ? false : notConnected || (!value.trim() && images.length === 0)}
           onClick={isStreaming ? onStop : handleSend}
         />
       </div>

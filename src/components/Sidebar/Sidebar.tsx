@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
 import { useChatStore } from '../../store/chatStore';
 import { useUiStore } from '../../store/uiStore';
+import { useDocStore } from '../../store/docStore';
 import { SidebarHeader } from './SidebarHeader';
 import { ChatItem } from './ChatItem';
 import { SidebarFooter } from './SidebarFooter';
@@ -22,6 +23,15 @@ export function Sidebar() {
       setSidebarOpen(false);
     }
   }, [switchChat, setSidebarOpen]);
+
+  // Delete a chat and immediately free any documents it owned (they aren't
+  // shared, so a deleted chat's docs are pure orphans). Capture the ids before
+  // deleting, then prune just those.
+  const handleDelete = useCallback((id: string) => {
+    const docIds = useChatStore.getState().conversations.find((c) => c.id === id)?.docIds ?? [];
+    deleteChat(id);
+    if (docIds.length) void useDocStore.getState().pruneOrphans(docIds);
+  }, [deleteChat]);
 
   return (
     <>
@@ -45,7 +55,7 @@ export function Sidebar() {
               title={c.title}
               isActive={c.id === activeId}
               onSelect={() => handleSelect(c.id)}
-              onDelete={() => deleteChat(c.id)}
+              onDelete={() => handleDelete(c.id)}
               onRename={(title) => renameChat(c.id, title)}
             />
           ))}
