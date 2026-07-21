@@ -3,18 +3,21 @@ import { persist } from 'zustand/middleware';
 import type { Message } from '../types';
 import type { Persona } from '../services/persona';
 import { fetchPersona } from '../services/persona';
+import { DEFAULT_STYLE, type PersonaStyle } from '../services/personaStyle';
 
 interface PersonaState {
   persona: Persona | null; // fetched config (cached to localStorage as a fallback)
   messages: Message[]; // the ongoing persona conversation
   memory: string; // running long-term memory about the user (persisted)
+  style: PersonaStyle; // active style directives (e.g. emoji on/off), persisted
   load: () => Promise<void>; // fetch the latest persona config from GitHub
   addMessage: (msg: Message) => void;
   updateLastMessage: (content: string) => void;
   setLastMessageError: (error: string) => void;
   removeLastIfEmptyAssistant: () => void;
   setMemory: (memory: string) => void;
-  clear: () => void; // start the persona chat over (also forgets memory)
+  setStyle: (patch: Partial<PersonaStyle>) => void;
+  clear: () => void; // start the persona chat over (also forgets memory + style)
 }
 
 export const usePersonaStore = create<PersonaState>()(
@@ -23,6 +26,7 @@ export const usePersonaStore = create<PersonaState>()(
       persona: null,
       messages: [],
       memory: '',
+      style: DEFAULT_STYLE,
 
       load: async () => {
         const persona = await fetchPersona();
@@ -58,13 +62,20 @@ export const usePersonaStore = create<PersonaState>()(
 
       setMemory: (memory) => set({ memory }),
 
-      clear: () => set({ messages: [], memory: '' }),
+      setStyle: (patch) => set((state) => ({ style: { ...state.style, ...patch } })),
+
+      clear: () => set({ messages: [], memory: '', style: DEFAULT_STYLE }),
     }),
     {
       name: 'ollama-persona-store',
-      // Persist the conversation, memory, and last-known persona (so the
+      // Persist the conversation, memory, style, and last-known persona (so the
       // name/avatar still show if GitHub is unreachable on next load).
-      partialize: (state) => ({ persona: state.persona, messages: state.messages, memory: state.memory }),
+      partialize: (state) => ({
+        persona: state.persona,
+        messages: state.messages,
+        memory: state.memory,
+        style: state.style,
+      }),
     }
   )
 );

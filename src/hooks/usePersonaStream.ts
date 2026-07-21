@@ -2,6 +2,11 @@ import { useState, useRef, useCallback } from 'react';
 import { streamChatRaw, hasEmbedModel, DEFAULT_EMBED_MODEL } from '../services/ollama';
 import { syncExampleBank, retrieveExamples } from '../services/personaExamples';
 import { updatePersonaMemory, isMeaningfulMemory } from '../services/personaMemory';
+import {
+  detectStyleDirective,
+  applyStyleToExamples,
+  cleanPersonaReply,
+} from '../services/personaStyle';
 import { usePersonaStore } from '../store/personaStore';
 import { useConnectionStore } from '../store/connectionStore';
 import { generateId } from '../utils/generateId';
@@ -36,6 +41,12 @@ export function usePersonaStream() {
     const { baseUrl, currentModel, models } = useConnectionStore.getState();
     if (!baseUrl || !currentModel || !persona) return;
 
+    // L1: detect a style directive ("no emoji" etc.) and update persistent
+    // style state so it applies this turn and every future one.
+    const directive = detectStyleDirective(trimmed);
+    if (directive) store.setStyle(directive);
+    const style = usePersonaStore.getState().style;
+
     store.addMessage({ id: generateId(), role: 'user', content: trimmed });
     store.addMessage({ id: generateId(), role: 'assistant', content: '' });
 
@@ -66,11 +77,17 @@ export function usePersonaStream() {
       }
     }
 
+    // L2: make the conditioning consistent with the active style — strip emoji
+    // from the injected examples when the user asked for none, so the examples
+    // stop contradicting the instruction (the root cause of the wavering).
+    exampleMsgs = applyStyleToExamples(exampleMsgs, style);
+
     const systemContent =
       persona.systemPrompt +
       (isMeaningfulMemory(memory)
         ? `\n\nThings you remember about them (from past chats):\n${memory}`
-        : '');
+        : '') +
+      (style.emoji ? '' : '\n\nThis person does not want any emojis. Do not use a single emoji.');
 
     // Exclude the empty assistant placeholder, keep the recent tail.
     const history = usePersonaStore.getState().messages.slice(0, -1).slice(-MAX_HISTORY);
@@ -85,7 +102,10 @@ export function usePersonaStream() {
       for await (const chunk of streamChatRaw(baseUrl, currentModel, wire, [], false, controller.signal)) {
         if (chunk.content) accRef.current += chunk.content;
       }
-      usePersonaStore.getState().updateLastMessage(accRef.current || '…');
+      // L3: deterministically clean the buffered reply — drop self-correction
+      // meta-notes, collapse redrafts, enforce the emoji preference — before it
+      // ever reaches the UI.
+      usePersonaStore.getState().updateLastMessage(cleanPersonaReply(accRef.current, style) || '…');
       ok = true;
     } catch (err) {
       if (err instanceof Error && err.name === 'AbortError') {
