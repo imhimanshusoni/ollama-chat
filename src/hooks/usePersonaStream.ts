@@ -44,14 +44,14 @@ export function usePersonaStream() {
     ];
 
     try {
-      // think:false — a real person doesn't show a reasoning trace. gemma4's
-      // natural sampling still applies inside streamChatRaw.
+      // Buffer the whole reply, don't paint it live — a real person's text just
+      // "arrives" after the typing indicator, it doesn't stream word by word.
+      // think:false — no reasoning trace. gemma4's sampling still applies.
       for await (const chunk of streamChatRaw(baseUrl, currentModel, wire, [], false, controller.signal)) {
-        if (chunk.content) {
-          accRef.current += chunk.content;
-          usePersonaStore.getState().updateLastMessage(accRef.current);
-        }
+        if (chunk.content) accRef.current += chunk.content;
       }
+      // Reveal the full message at once (typing dots showed until now).
+      usePersonaStore.getState().updateLastMessage(accRef.current || '…');
     } catch (err) {
       if (err instanceof Error && err.name === 'AbortError') {
         usePersonaStore.getState().removeLastIfEmptyAssistant();
