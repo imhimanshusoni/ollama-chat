@@ -1,7 +1,7 @@
 import { useRef, useState, useCallback } from 'react';
 import { useConnectionStore } from '../../store/connectionStore';
 import { useChatStore } from '../../store/chatStore';
-import { warmModel } from '../../services/ollama';
+import { isEmbedModel, warmModel } from '../../services/ollama';
 import { useClickOutside } from '../../hooks/useClickOutside';
 import type { ThinkLevel } from '../../types';
 import styles from './ComposerControls.module.css';
@@ -30,7 +30,9 @@ export function ComposerControls() {
   useClickOutside(rootRef, close);
 
   const baseUrl = useConnectionStore((s) => s.baseUrl);
-  const models = useConnectionStore((s) => s.models);
+  const allModels = useConnectionStore((s) => s.models);
+  // Embedding models (e.g. nomic-embed-text) can't chat — keep them out of the picker.
+  const models = allModels.filter((m) => !isEmbedModel(m));
   const currentModel = useConnectionStore((s) => s.currentModel);
   const setCurrentModel = useConnectionStore((s) => s.setCurrentModel);
   // Thinking level is per-conversation, so each chat remembers its own setting.

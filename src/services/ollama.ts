@@ -81,6 +81,16 @@ export function hasEmbedModel(models: string[], embedModel = DEFAULT_EMBED_MODEL
   return models.some((m) => m === embedModel || m.split(':')[0] === base);
 }
 
+// Is this an embedding model (not a chat model)? Used to hide it from the model
+// picker and to avoid auto-selecting it as the chat model. Most embedding models
+// carry "embed" in the name (nomic-embed-text, mxbai-embed-large,
+// snowflake-arctic-embed, granite-embedding); a couple of families are matched
+// explicitly.
+export function isEmbedModel(model: string): boolean {
+  const base = model.split(':')[0].toLowerCase();
+  return base.includes('embed') || base.startsWith('bge-') || base === 'all-minilm';
+}
+
 // nomic-embed-text is trained with task-instruction prefixes and its retrieval
 // quality drops noticeably without them: documents must be embedded with
 // "search_document: " and queries with "search_query: ". Applied only for

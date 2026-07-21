@@ -1,5 +1,5 @@
 import { useConnectionStore } from '../store/connectionStore';
-import { fetchModels, warmModel } from './ollama';
+import { fetchModels, isEmbedModel, warmModel } from './ollama';
 import { fetchRemoteModelUrl } from './remoteConfig';
 
 // The retry timer, the window-focus listener, and the banner's Retry button
@@ -51,7 +51,10 @@ async function doConnect(rawUrl: string, opts?: { manual?: boolean }): Promise<b
     setModels(modelList);
     if (modelList.length > 0) {
       const saved = useConnectionStore.getState().currentModel;
-      const model = modelList.includes(saved) ? saved : modelList[0];
+      // Prefer the saved model; otherwise auto-pick the first chat model,
+      // never an embedding model (which can't chat).
+      const chatModels = modelList.filter((m) => !isEmbedModel(m));
+      const model = modelList.includes(saved) ? saved : (chatModels[0] ?? modelList[0]);
       setCurrentModel(model);
       void warmModel(url, model); // preload so the first message is fast
     }
