@@ -1,5 +1,6 @@
 import { memo, useState, useCallback, useEffect, useRef } from 'react';
 import type { Message as MessageType, ToolInvocation } from '../../types';
+import { usePinToBottom } from '../../hooks/usePinToBottom';
 import { MarkdownRenderer } from '../Markdown/MarkdownRenderer';
 import { escapeHtml } from '../../utils/escapeHtml';
 import { base64ImageDataUrl } from '../../utils/imageUtils';
@@ -144,6 +145,9 @@ function Reasoning({ text, open, streaming }: { text: string; open: boolean; str
   // growth alone never fires scroll events, so this only reacts to the user
   // (and to our own pin-to-bottom, which lands at distance 0 and keeps it on).
   const followRef = useRef(true);
+  // Pin without fighting native touch scrolling (skips writes mid-touch, one
+  // write per frame) — same anti-freeze treatment as the main chat container.
+  const { pin } = usePinToBottom(bodyRef, () => followRef.current);
 
   const handleToggle = useCallback((e: React.SyntheticEvent<HTMLDetailsElement>) => {
     // Keep an expanded reasoning trace in view (manual open, or auto-open while streaming).
@@ -159,10 +163,8 @@ function Reasoning({ text, open, streaming }: { text: string; open: boolean; str
   // While reasoning streams, keep the (height-capped) box pinned to the latest
   // tokens so you can watch it think — unless the user scrolled up to read.
   useEffect(() => {
-    if (streaming && followRef.current && bodyRef.current) {
-      bodyRef.current.scrollTop = bodyRef.current.scrollHeight;
-    }
-  }, [text, streaming]);
+    if (streaming) pin();
+  }, [text, streaming, pin]);
 
   return (
     <details className={styles.reasoning} open={open} onToggle={handleToggle}>

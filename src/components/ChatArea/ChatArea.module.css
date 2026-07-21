@@ -4,6 +4,12 @@
   overflow-x: hidden;
   padding: var(--space-8) var(--space-6) var(--space-4);
   position: relative;
+  /* Don't chain scroll into the overflow:hidden body; don't let the browser's
+     scroll anchoring compete with our own pin-to-bottom. NOTE: no touch-action
+     here — pan-y would break horizontal touch-scroll of nested code blocks and
+     tables (which have their own overflow-x). */
+  overscroll-behavior: contain;
+  overflow-anchor: none;
 }
 
 .area::-webkit-scrollbar { width: 5px; }

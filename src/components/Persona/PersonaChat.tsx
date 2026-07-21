@@ -4,6 +4,7 @@ import { usePersonaStore } from '../../store/personaStore';
 import { useUiStore } from '../../store/uiStore';
 import { useConnectionStore } from '../../store/connectionStore';
 import { usePersonaStream } from '../../hooks/usePersonaStream';
+import { usePinToBottom } from '../../hooks/usePinToBottom';
 import { hasEmbedModel, DEFAULT_EMBED_MODEL } from '../../services/ollama';
 import { syncExampleBank } from '../../services/personaExamples';
 import { PersonaAvatar } from './PersonaAvatar';
@@ -28,6 +29,9 @@ export function PersonaChat() {
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const { resize, reset } = useAutoResize(inputRef);
+  // Follow new messages without fighting native touch scrolling. No sticky
+  // concept here — always follow, but only when the user isn't scrolling.
+  const { pin } = usePinToBottom(scrollRef, () => true);
   const notConnected = status !== 'connected';
 
   // Refresh the persona config when this space opens (cheap, cache-busted).
@@ -46,8 +50,8 @@ export function PersonaChat() {
 
   // Keep pinned to the newest message.
   useEffect(() => {
-    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
-  }, [messages]);
+    pin();
+  }, [messages, pin]);
 
   const name = persona?.name ?? 'Persona';
   const avatar = persona?.avatar ?? '🙂';

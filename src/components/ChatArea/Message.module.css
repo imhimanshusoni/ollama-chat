@@ -271,6 +271,11 @@
   overflow-wrap: break-word;
   max-height: 22rem;
   overflow-y: auto;
+  /* Nested scroller: keep its scroll from chaining into the parent, and stop the
+     browser's scroll anchoring from fighting our pin-to-bottom. (No touch-action
+     — a reasoning trace can contain code/tables that scroll horizontally.) */
+  overscroll-behavior: contain;
+  overflow-anchor: none;
 }
 
 /* Keep the reasoning trace visually subordinate: tame markdown heading sizes

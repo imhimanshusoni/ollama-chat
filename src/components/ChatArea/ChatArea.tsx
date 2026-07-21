@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState, useCallback } from 'react';
 import { useChatStore } from '../../store/chatStore';
+import { usePinToBottom } from '../../hooks/usePinToBottom';
 import { MessageList } from './MessageList';
 import { EmptyState } from './EmptyState';
 import styles from './ChatArea.module.css';
@@ -19,6 +20,11 @@ export function ChatArea({ isStreaming, onRegenerate, onEditResend }: Props) {
   const prevMsgCountRef = useRef(0);
   const reengageTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [jumpVisible, setJumpVisible] = useState(false);
+
+  // Pin-to-bottom that won't fight native touch scrolling: skips writes while a
+  // finger is down and coalesces bursts to one write per frame. isTouchingRef is
+  // also used below to avoid re-engaging stickiness mid-touch.
+  const { pin, isTouchingRef } = usePinToBottom(scrollRef, () => stickyRef.current);
 
   const convo = conversations.find((c) => c.id === activeId);
   const messages = convo?.messages || [];
@@ -94,9 +100,15 @@ export function ChatArea({ isStreaming, onRegenerate, onEditResend }: Props) {
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {
-          // Debounce: wait 150ms for scroll momentum to settle
-          if (!reengageTimer.current) {
+          // Debounce: wait 150ms for scroll momentum to settle. Don't re-engage
+          // while a finger is down — a finger resting near the bottom shouldn't
+          // silently flip auto-scroll back on and start pinning under the user.
+          if (!reengageTimer.current && !isTouchingRef.current) {
             reengageTimer.current = setTimeout(() => {
+              if (isTouchingRef.current) {
+                reengageTimer.current = null;
+                return;
+              }
               stickyRef.current = true;
               setJumpVisible(false);
               reengageTimer.current = null;
@@ -144,11 +156,8 @@ export function ChatArea({ isStreaming, onRegenerate, onEditResend }: Props) {
   const lastContent = messages[messages.length - 1]?.content;
   const lastThinking = messages[messages.length - 1]?.thinking;
   useEffect(() => {
-    if (isStreaming && stickyRef.current) {
-      const el = scrollRef.current;
-      if (el) el.scrollTop = el.scrollHeight;
-    }
-  }, [lastContent, lastThinking, isStreaming]);
+    if (isStreaming) pin();
+  }, [lastContent, lastThinking, isStreaming, pin]);
 
   const handleJump = useCallback(() => {
     stickyRef.current = true;
