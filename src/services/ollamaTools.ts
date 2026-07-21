@@ -211,22 +211,32 @@ export async function* streamChatWithTools(
   messages: Message[],
   think: boolean | string,
   signal: AbortSignal,
-  opts?: { contextSummary?: string }
+  opts?: {
+    contextSummary?: string;
+    // Pre-built document context (inline full text and/or retrieved excerpts),
+    // injected into the system message. Retrieval happens caller-side so it's
+    // always available without depending on the model choosing to search.
+    docContext?: string;
+  }
 ): AsyncGenerator<ToolStreamEvent> {
-  const toolCtx: ToolContext = { signal };
   let toolsDisabled = toolUnsupportedModels.has(model);
   // Without a configured search key, web_search can only fail — don't offer
   // it, and don't let the system prompt encourage it.
   const searchAvailable = isSearchConfigured();
+  const docsAvailable = !!opts?.docContext;
+  const toolCtx: ToolContext = { signal };
   const availableTools = searchAvailable
     ? tools
     : tools.filter((t) => t.function.name !== 'web_search');
   const systemMessage = (toolsEnabled: boolean): OllamaMessage => ({
     role: 'system',
     content:
-      buildSystemPrompt('', toolsEnabled, searchAvailable) +
+      buildSystemPrompt('', toolsEnabled, searchAvailable, docsAvailable) +
       (opts?.contextSummary
         ? `\n\nSummary of the earlier conversation (for your memory):\n${opts.contextSummary}`
+        : '') +
+      (opts?.docContext
+        ? `\n\nThe user has attached documents. Use them to answer, and cite the source filename. Documents:\n${opts.docContext}`
         : ''),
   });
   const buildWorking = (plainText: boolean): OllamaMessage[] => [

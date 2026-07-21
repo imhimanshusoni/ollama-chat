@@ -3,6 +3,7 @@ import { useConnectionRetry } from './hooks/useConnectionRetry';
 import { useStreamResponse } from './hooks/useStreamResponse';
 import { useChatStore } from './store/chatStore';
 import { useUiStore } from './store/uiStore';
+import { useDocStore } from './store/docStore';
 import { syncAndConnect } from './services/connection';
 import { Sidebar } from './components/Sidebar/Sidebar';
 import { TopBar } from './components/TopBar/TopBar';
@@ -34,8 +35,10 @@ export default function App() {
 
   // Auto-sync the tunnel URL + reconnect on load; status flows
   // connecting → connected/error so failures are visible in the UI.
+  // Also load the RAG document library from IndexedDB.
   useEffect(() => {
     void syncAndConnect();
+    void useDocStore.getState().hydrate();
   }, []);
 
   return (

@@ -3,6 +3,7 @@ import type { Message as MessageType, ToolInvocation } from '../../types';
 import { MarkdownRenderer } from '../Markdown/MarkdownRenderer';
 import { escapeHtml } from '../../utils/escapeHtml';
 import { base64ImageDataUrl } from '../../utils/imageUtils';
+import { useDocStore } from '../../store/docStore';
 import styles from './Message.module.css';
 
 interface Props {
@@ -72,6 +73,29 @@ function formatArgs(args: Record<string, unknown>): string {
   return keys
     .map((k) => `${k}: ${typeof args[k] === 'string' ? args[k] : JSON.stringify(args[k])}`)
     .join(', ');
+}
+
+// File pills for documents attached to a message (resolves names from the doc
+// store; falls back to the id if a doc was later deleted).
+function DocPills({ docIds }: { docIds: string[] }) {
+  const documents = useDocStore((s) => s.documents);
+  if (docIds.length === 0) return null;
+  return (
+    <div className={styles.docPills}>
+      {docIds.map((id) => {
+        const doc = documents.find((d) => d.id === id);
+        return (
+          <span key={id} className={styles.docPill}>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+              <polyline points="14 2 14 8 20 8" />
+            </svg>
+            {doc?.name ?? 'document'}
+          </span>
+        );
+      })}
+    </div>
+  );
 }
 
 function ToolCalls({ calls }: { calls: ToolInvocation[] }) {
@@ -214,6 +238,7 @@ function MessageInner({ message, isStreaming, actionsDisabled, onRegenerate, onE
             ))}
           </div>
         )}
+        {message.docIds && message.docIds.length > 0 && <DocPills docIds={message.docIds} />}
         {!isUser && message.thinking && (
           <Reasoning
             text={message.thinking}

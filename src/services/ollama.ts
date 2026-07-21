@@ -52,6 +52,98 @@ export async function fetchModels(baseUrl: string): Promise<string[]> {
   return (data.models || []).map((m: { name: string }) => m.name);
 }
 
+// ---------------------------------------------------------------------------
+// Embeddings (RAG "Chat with your Documents").
+// ---------------------------------------------------------------------------
+
+// Default embedding model. 768-dim, ~274MB — small enough to sit beside the
+// pinned chat model in VRAM. The user pulls it on the remote Ollama with
+// `ollama pull nomic-embed-text`.
+export const DEFAULT_EMBED_MODEL = 'nomic-embed-text';
+
+// Thrown when /api/embed reports the embedding model isn't installed. The UI
+// catches this to show an actionable "ollama pull" instruction instead of a
+// generic failure.
+export class EmbedModelMissingError extends Error {
+  model: string;
+  constructor(model: string) {
+    super(`Embedding model "${model}" is not installed on the Ollama server.`);
+    this.name = 'EmbedModelMissingError';
+    this.model = model;
+  }
+}
+
+// Does the connected server (its /api/tags list) have the embedding model?
+// Ollama tags carry a `:tag` suffix (e.g. "nomic-embed-text:latest"), so match
+// on the base name. Used for the up-front UI gate — no extra network call.
+export function hasEmbedModel(models: string[], embedModel = DEFAULT_EMBED_MODEL): boolean {
+  const base = embedModel.split(':')[0];
+  return models.some((m) => m === embedModel || m.split(':')[0] === base);
+}
+
+// nomic-embed-text is trained with task-instruction prefixes and its retrieval
+// quality drops noticeably without them: documents must be embedded with
+// "search_document: " and queries with "search_query: ". Applied only for
+// nomic models — other embedding models get the raw text. A query and its
+// documents must use the same model (and thus the same prefixing) to be
+// comparable; RagDocument.embedModel records which model embedded each doc.
+export function embedPrefix(model: string, kind: 'query' | 'document'): string {
+  if (!model.split(':')[0].startsWith('nomic-embed-text')) return '';
+  return kind === 'query' ? 'search_query: ' : 'search_document: ';
+}
+
+/**
+ * Embed a batch of texts via Ollama's current /api/embed endpoint (NOT the
+ * legacy singular /api/embeddings). Returns one vector per input, in order.
+ *
+ * `truncate: true` lets Ollama clip an over-long chunk to the model's context
+ * rather than failing the whole batch. A cold embed model pays a load cost like
+ * chat does, so this uses the loose meta timeout, not the connect one.
+ */
+export async function embedTexts(
+  baseUrl: string,
+  model: string,
+  input: string[],
+  signal?: AbortSignal
+): Promise<number[][]> {
+  if (input.length === 0) return [];
+
+  // A network-level failure propagates as-is, so the caller can distinguish it
+  // from EmbedModelMissingError (which is only thrown on an explicit 404).
+  const resp = await fetch(baseUrl + '/api/embed', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ model, input, keep_alive: KEEP_ALIVE, truncate: true }),
+    signal: signal
+      ? AbortSignal.any([signal, AbortSignal.timeout(META_TIMEOUT_MS)])
+      : AbortSignal.timeout(META_TIMEOUT_MS),
+  });
+
+  if (!resp.ok) {
+    // Ollama returns 404 with a body like {"error":"model '...' not found"}
+    // when the model isn't pulled. Detect it so the UI can guide the user.
+    let bodyText = '';
+    try {
+      bodyText = await resp.text();
+    } catch {
+      // ignore — fall through to the generic error
+    }
+    if (resp.status === 404 || /not found/i.test(bodyText)) {
+      throw new EmbedModelMissingError(model);
+    }
+    throw new Error('HTTP ' + resp.status);
+  }
+
+  const data: { embeddings?: number[][] } = await resp.json();
+  const embeddings = data.embeddings ?? [];
+  if (embeddings.length !== input.length) {
+    throw new Error(
+      `Embedding count mismatch: expected ${input.length}, got ${embeddings.length}`
+    );
+  }
+  return embeddings;
+}
+
 /**
  * Preload a model into memory (and pin it via keep_alive) so the first real
  * message doesn't pay the load cost. Ollama loads the model when `messages` is

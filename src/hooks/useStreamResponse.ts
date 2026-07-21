@@ -4,8 +4,11 @@ import { streamChatWithTools } from '../services/ollamaTools';
 import { buildSystemPrompt } from '../services/prompts';
 import { summarizeSpan } from '../services/summarizer';
 import { generateChatTitle } from '../services/titleGenerator';
+import { DEFAULT_EMBED_MODEL } from '../services/ollama';
+import { buildDocContext } from '../services/docContext';
 import { useChatStore } from '../store/chatStore';
 import { useConnectionStore } from '../store/connectionStore';
+import { useDocStore } from '../store/docStore';
 import { generateId } from '../utils/generateId';
 
 // Background meta calls (title, summary) share one controller so a new send
@@ -86,8 +89,10 @@ export function useStreamResponse() {
     if (!baseUrl || !currentModel) return;
 
     // Thinking depth is stored per-conversation; 'off' maps to think:false.
-    const level = conversations.find((c) => c.id === activeId)?.thinkLevel ?? 'off';
+    const activeConv = conversations.find((c) => c.id === activeId);
+    const level = activeConv?.thinkLevel ?? 'off';
     const think = level === 'off' ? false : level;
+    const docIds = activeConv?.docIds ?? [];
 
     // Add empty assistant message
     addMessage(activeId, { id: generateId(), role: 'assistant', content: '' });
@@ -103,23 +108,43 @@ export function useStreamResponse() {
     setIsStreaming(true);
 
     let completed = false;
-    // For token estimation in the context window (assume tools active).
+    // Base system prompt for the background summarizer's eviction estimate.
     const systemPromptText = buildSystemPrompt('', true);
 
     try {
       const conv = useChatStore.getState().conversations.find(c => c.id === activeId);
       const messages = conv?.messages ?? [];
+      const priorMessages = messages.slice(0, -1); // exclude the empty assistant
 
-      // Exclude the empty assistant message we just added, then fit the
-      // history to the prompt budget (window + rolling summary).
-      const { history, summaryText } = buildContext(
-        conv ?? {},
-        messages.slice(0, -1),
-        systemPromptText
-      );
+      // Build the document context injected this turn: inline docs contribute
+      // their full text; rag docs contribute a summary + chunks retrieved for the
+      // latest user message. Works even without an embed model (inline docs and
+      // summaries need none; retrieval just no-ops).
+      const attachedDocs = docIds.length
+        ? useDocStore.getState().documents.filter((d) => docIds.includes(d.id))
+        : [];
+      const lastUser = [...priorMessages].reverse().find((m) => m.role === 'user');
+      const doc = attachedDocs.length
+        ? await buildDocContext(
+            attachedDocs,
+            lastUser?.content ?? '',
+            baseUrl,
+            DEFAULT_EMBED_MODEL,
+            controller.signal
+          )
+        : { text: '', tokens: 0 };
+
+      // Reserve prompt-budget room for the injected doc block by folding it into
+      // the system-prompt estimate the sliding window uses.
+      const budgetPrompt =
+        buildSystemPrompt('', true, true, !!doc.text) + (doc.text ? `\n${doc.text}` : '');
+
+      // Fit the history to the prompt budget (window + rolling summary).
+      const { history, summaryText } = buildContext(conv ?? {}, priorMessages, budgetPrompt);
 
       for await (const ev of streamChatWithTools(baseUrl, currentModel, history, think, controller.signal, {
         contextSummary: summaryText,
+        ...(doc.text ? { docContext: doc.text } : {}),
       })) {
         if (ev.type === 'reset') {
           accumulatedRef.current = '';
@@ -173,14 +198,23 @@ export function useStreamResponse() {
     }
   }, []);
 
-  const send = useCallback(async (text: string, images?: string[]) => {
-    const { activeId, addMessage, setTitle } = useChatStore.getState();
+  const send = useCallback(async (text: string, images?: string[], docIds?: string[]) => {
+    const { activeId, addMessage, setTitle, addDocToConversation } = useChatStore.getState();
     const { baseUrl, currentModel } = useConnectionStore.getState();
 
     if (!activeId || !baseUrl || !currentModel) return;
 
-    // Add user message (with optional images)
-    addMessage(activeId, { id: generateId(), role: 'user', content: text, ...(images ? { images } : {}) });
+    // Add user message (with optional images and attached-document ids for display).
+    addMessage(activeId, {
+      id: generateId(),
+      role: 'user',
+      content: text,
+      ...(images ? { images } : {}),
+      ...(docIds && docIds.length ? { docIds } : {}),
+    });
+    // Commit attached docs to the conversation's context set so follow-ups keep
+    // seeing them (they're injected every turn regardless of the composer chip).
+    for (const id of docIds ?? []) addDocToConversation(activeId, id);
 
     // Set title from first message if empty
     const conversation = useChatStore.getState().conversations.find((c) => c.id === activeId);

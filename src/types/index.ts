@@ -11,6 +11,7 @@ export interface Message {
   role: 'user' | 'assistant';
   content: string;
   images?: string[]; // base64-encoded, no data URI prefix
+  docIds?: string[]; // documents attached to this message (for display on the bubble)
   toolCalls?: ToolInvocation[];
   thinking?: string; // reasoning trace, populated only when thinking is enabled
   error?: string; // stream failure shown inline under the message
@@ -46,6 +47,62 @@ export interface Conversation {
   titleGenerated?: boolean; // an LLM-summarized title has been set (never re-title)
   lastTokenStats?: TokenStats;
   contextSummary?: ContextSummary;
+  // RAG: ids of documents attached to this chat. Their content is injected into
+  // context every turn (inline docs) or retrieved from (rag docs). This is the
+  // only RAG data persisted to localStorage — documents and vectors live in
+  // IndexedDB.
+  docIds?: string[];
+}
+
+// --- RAG (Chat with your Documents) types ---
+// Documents and their embedded chunks live in IndexedDB (see vectorStore.ts),
+// never in Zustand-persist/localStorage. Only Conversation.docIds is persisted.
+
+export type DocStatus = 'parsing' | 'chunking' | 'embedding' | 'summarizing' | 'ready' | 'error';
+
+// How a document is fed to the model, decided at ingest by token count
+// (mirrors Claude: small docs go fully in-context; large docs use retrieval).
+//   'inline' — the whole text is injected into context every turn (no embedding).
+//   'rag'    — the text is chunked + embedded; a summary + retrieved chunks are
+//              injected each turn.
+export type DocMode = 'inline' | 'rag';
+
+// Per-document metadata (IndexedDB `documents` store).
+export interface RagDocument {
+  id: string;
+  name: string; // original filename
+  mime: string; // application/pdf | text/plain | text/markdown
+  bytes: number;
+  status: DocStatus;
+  error?: string;
+  created: number;
+  mode?: DocMode; // set once ingestion classifies the doc
+  tokenCount?: number; // estimated tokens of the extracted text
+  fullText?: string; // inline mode: the whole extracted text, injected every turn
+  summary?: string; // rag mode: a one-time summary injected every turn
+  chunkCount?: number; // rag mode: number of embedded chunks
+  embedModel?: string; // rag mode: model used to embed (vectors compare only within one model)
+}
+
+// A single embedded chunk (IndexedDB `chunks` store). The embedding is stored
+// L2-normalized as a Float32Array, so query-time similarity is a dot product.
+export interface RagChunk {
+  id: string; // `${docId}:${index}`
+  docId: string;
+  index: number; // ordinal within the doc, for citations ("chunk 3")
+  text: string;
+  embedding: Float32Array;
+  page?: number; // PDF page number when available, for citations
+}
+
+// A retrieval hit returned by vectorStore.searchChunks.
+export interface RetrievedChunk {
+  docId: string;
+  docName: string;
+  index: number;
+  page?: number;
+  text: string;
+  score: number; // cosine similarity (== dot product on normalized vectors)
 }
 
 export type ConnectionStatus = 'idle' | 'connecting' | 'connected' | 'error';

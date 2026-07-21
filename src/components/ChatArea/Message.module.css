@@ -172,6 +172,32 @@
   margin-top: var(--space-1);
 }
 
+/* File pills for documents attached to a message. */
+.docPills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  margin-bottom: var(--space-2);
+}
+
+.docPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 100%;
+  padding: 2px var(--space-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  background: var(--bg-input);
+  color: var(--text-2);
+  font-size: var(--font-xs);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.docPill svg { flex-shrink: 0; color: var(--text-3); }
+
 .toolBlock {
   display: flex;
   flex-direction: column;

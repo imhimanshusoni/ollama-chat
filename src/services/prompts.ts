@@ -19,12 +19,19 @@ Search rules:
 export const TIME_ONLY_GUIDANCE = `You have one tool:
 - get_current_time: use it whenever the current date or time matters.`;
 
+// Appended when documents are attached. The document text itself is injected
+// separately into the system message (see streamChatWithTools) — this just
+// tells the model how to use it.
+export const DOC_GUIDANCE = `The user has attached one or more documents (their content is provided below in the conversation context). When their question relates to those files, answer from the provided document content rather than guessing, and cite the source filename (and page, if given).`;
+
 export function buildSystemPrompt(
   override: string,
   toolsEnabled: boolean,
-  searchEnabled = true
+  searchEnabled = true,
+  docsEnabled = false
 ): string {
   const base = override.trim() || DEFAULT_SYSTEM_PROMPT;
   if (!toolsEnabled) return base;
-  return `${base}\n\n${searchEnabled ? TOOL_GUIDANCE : TIME_ONLY_GUIDANCE}`;
+  const guidance = searchEnabled ? TOOL_GUIDANCE : TIME_ONLY_GUIDANCE;
+  return `${base}\n\n${guidance}${docsEnabled ? `\n${DOC_GUIDANCE}` : ''}`;
 }

@@ -3,6 +3,7 @@ import { useConnectionStore } from '../../store/connectionStore';
 import { useUiStore } from '../../store/uiStore';
 import { connect, normalizeUrl, syncAndConnect } from '../../services/connection';
 import { IconButton } from '../ui/IconButton';
+import { DocumentsSettings } from './DocumentsSettings';
 import styles from './SettingsPanel.module.css';
 
 export function SettingsPanel() {
@@ -108,6 +109,7 @@ export function SettingsPanel() {
             Pick your model and thinking level from the controls next to the message box.
           </p>
         )}
+        <DocumentsSettings />
       </div>
     </div>
   );

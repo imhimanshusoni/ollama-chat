@@ -1,13 +1,18 @@
 import { useRef, useState, useCallback, type KeyboardEvent, type ClipboardEvent, type DragEvent } from 'react';
 import { useAutoResize } from '../../hooks/useAutoResize';
 import { useConnectionStore } from '../../store/connectionStore';
+import { useDocStore } from '../../store/docStore';
 import { validateImage, prepareImage, fileToBase64, fileToDataUrl } from '../../utils/imageUtils';
+import { isSupportedDoc } from '../../utils/docUtils';
+import { DEFAULT_EMBED_MODEL } from '../../services/ollama';
 import { SendButton } from './SendButton';
 import { ComposerControls } from './ComposerControls';
+import { DocAttach } from './DocAttach';
+import { DocChips } from './DocChips';
 import styles from './InputArea.module.css';
 
 interface Props {
-  onSend: (text: string, images?: string[]) => void;
+  onSend: (text: string, images?: string[], docIds?: string[]) => void;
   onStop: () => void;
   isStreaming: boolean;
 }
@@ -20,14 +25,32 @@ export function InputArea({ onSend, onStop, isStreaming }: Props) {
   const [touch] = useState(isTouchDevice);
   const [imageBase64, setImageBase64] = useState<string | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  // Documents staged for the NEXT message. On send they become part of the
+  // message (a pill on the bubble) and join the conversation's context set, then
+  // clear from here — the composer is never a permanent doc pin.
+  const [pendingDocIds, setPendingDocIds] = useState<string[]>([]);
   const [dragOver, setDragOver] = useState(false);
   const ref = useRef<HTMLTextAreaElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const { resize, reset } = useAutoResize(ref);
   const status = useConnectionStore((s) => s.status);
-  // Textarea/attach are only disabled when not connected — they stay usable
-  // while a response streams. Only the send button is disabled mid-stream.
+  const baseUrl = useConnectionStore((s) => s.baseUrl);
+  const ingest = useDocStore((s) => s.ingest);
+  const documents = useDocStore((s) => s.documents);
   const notConnected = status !== 'connected';
+
+  const addPending = useCallback((id: string) => {
+    setPendingDocIds((p) => (p.includes(id) ? p : [...p, id]));
+  }, []);
+  const removePending = useCallback((id: string) => {
+    setPendingDocIds((p) => p.filter((x) => x !== id));
+  }, []);
+
+  // Stage a document for the next message: ingest it and add its id to pending
+  // as soon as the record exists (so its progress chip shows immediately).
+  const attachDoc = useCallback((file: File) => {
+    void ingest(file, baseUrl, DEFAULT_EMBED_MODEL, addPending);
+  }, [ingest, baseUrl, addPending]);
 
   const attachImage = useCallback(async (file: File) => {
     const { valid, error } = validateImage(file);
@@ -51,14 +74,26 @@ export function InputArea({ onSend, onStop, isStreaming }: Props) {
     if (fileRef.current) fileRef.current.value = '';
   }, []);
 
+  // Block send while a staged doc is still ingesting, so the first answer isn't
+  // generated before its content is available (matches Claude's upload gating).
+  const pendingBusy = pendingDocIds.some((id) => {
+    const d = documents.find((doc) => doc.id === id);
+    return d ? d.status !== 'ready' && d.status !== 'error' : false;
+  });
+
   const handleSend = useCallback(() => {
     const text = value.trim();
-    if ((!text && !imageBase64) || notConnected || isStreaming) return;
-    onSend(text || 'What is in this image?', imageBase64 ? [imageBase64] : undefined);
+    if ((!text && !imageBase64) || notConnected || isStreaming || pendingBusy) return;
+    onSend(
+      text || 'What is in this image?',
+      imageBase64 ? [imageBase64] : undefined,
+      pendingDocIds.length ? pendingDocIds : undefined
+    );
     setValue('');
     removeImage();
+    setPendingDocIds([]);
     reset();
-  }, [value, imageBase64, notConnected, isStreaming, onSend, removeImage, reset]);
+  }, [value, imageBase64, notConnected, isStreaming, pendingBusy, pendingDocIds, onSend, removeImage, reset]);
 
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     // On touch devices there's no easy Shift key, so Enter inserts a
@@ -100,11 +135,13 @@ export function InputArea({ onSend, onStop, isStreaming }: Props) {
   const handleDrop = useCallback((e: DragEvent) => {
     e.preventDefault();
     setDragOver(false);
-    const file = e.dataTransfer.files?.[0];
-    if (file && file.type.startsWith('image/')) {
-      attachImage(file);
+    const files = e.dataTransfer.files;
+    if (!files) return;
+    for (const file of files) {
+      if (file.type.startsWith('image/')) attachImage(file);
+      else if (isSupportedDoc(file)) attachDoc(file);
     }
-  }, [attachImage]);
+  }, [attachImage, attachDoc]);
 
   return (
     <div
@@ -113,6 +150,7 @@ export function InputArea({ onSend, onStop, isStreaming }: Props) {
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
     >
+      <DocChips pendingDocIds={pendingDocIds} onRemove={removePending} />
       {imagePreview && (
         <div className={styles.previewRow}>
           <div className={styles.preview}>
@@ -131,6 +169,7 @@ export function InputArea({ onSend, onStop, isStreaming }: Props) {
         </div>
       )}
       <div className={`${styles.wrap} ${dragOver ? styles.dragOver : ''}`}>
+        <DocAttach pendingDocIds={pendingDocIds} onAdd={addPending} onRemove={removePending} />
         <button
           className={styles.attachBtn}
           onClick={() => fileRef.current?.click()}
@@ -165,7 +204,7 @@ export function InputArea({ onSend, onStop, isStreaming }: Props) {
         />
         <SendButton
           isStreaming={isStreaming}
-          disabled={isStreaming ? false : notConnected || (!value.trim() && !imageBase64)}
+          disabled={isStreaming ? false : notConnected || pendingBusy || (!value.trim() && !imageBase64)}
           onClick={isStreaming ? onStop : handleSend}
         />
       </div>

@@ -40,6 +40,11 @@ interface ChatState {
   renameChat: (id: string, title: string) => void;
   truncateFrom: (id: string, messageId: string) => void;
   setThinkLevel: (id: string, level: ThinkLevel) => void;
+  addDocToConversation: (id: string, docId: string) => void;
+  removeDocFromConversation: (id: string, docId: string) => void;
+  // Called after a document is deleted from the global library — drop its id
+  // from every conversation that referenced it.
+  purgeDocFromAllConversations: (docId: string) => void;
   setTokenStats: (id: string, stats: TokenStats) => void;
   setContextSummary: (id: string, summary: ContextSummary) => void;
   setLastMessageError: (id: string, error: string) => void;
@@ -236,6 +241,35 @@ export const useChatStore = create<ChatState>()(
           set((state) => ({
             conversations: state.conversations.map((c) =>
               c.id === id ? { ...c, thinkLevel: level } : c
+            ),
+          }));
+        },
+
+        addDocToConversation: (id, docId) => {
+          set((state) => ({
+            conversations: state.conversations.map((c) => {
+              if (c.id !== id) return c;
+              const docIds = c.docIds ?? [];
+              if (docIds.includes(docId)) return c;
+              return { ...c, docIds: [...docIds, docId] };
+            }),
+          }));
+        },
+
+        removeDocFromConversation: (id, docId) => {
+          set((state) => ({
+            conversations: state.conversations.map((c) =>
+              c.id === id ? { ...c, docIds: (c.docIds ?? []).filter((d) => d !== docId) } : c
+            ),
+          }));
+        },
+
+        purgeDocFromAllConversations: (docId) => {
+          set((state) => ({
+            conversations: state.conversations.map((c) =>
+              c.docIds?.includes(docId)
+                ? { ...c, docIds: c.docIds.filter((d) => d !== docId) }
+                : c
             ),
           }));
         },
