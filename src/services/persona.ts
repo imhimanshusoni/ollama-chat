@@ -7,10 +7,12 @@ export interface Persona {
   name: string;
   avatar: string; // emoji or short label shown in the header/bubbles
   systemPrompt: string;
-  // Curated example exchanges (alternating user/assistant) injected as few-shot
-  // context so the model imitates the persona's real texting style — the part
-  // that makes it feel human rather than a prompted assistant.
+  // Example exchange bank (alternating user/assistant). Embedded and retrieved
+  // per message (personaExamples.ts) so the persona can draw on a large set of
+  // real examples rather than a few canned ones.
   examples: OllamaMessage[];
+  // Whether the persona builds up long-term memory of the user across the chat.
+  memoryEnabled: boolean;
 }
 
 const PERSONA_RAW_URL =
@@ -30,6 +32,7 @@ export async function fetchPersona(): Promise<Persona | null> {
       avatar: data.avatar || '🙂',
       systemPrompt: data.systemPrompt,
       examples: Array.isArray(data.examples) ? data.examples : [],
+      memoryEnabled: data.memoryEnabled !== false, // default on
     };
   } catch {
     return null;

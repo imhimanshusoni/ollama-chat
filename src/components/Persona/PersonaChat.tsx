@@ -4,6 +4,8 @@ import { usePersonaStore } from '../../store/personaStore';
 import { useUiStore } from '../../store/uiStore';
 import { useConnectionStore } from '../../store/connectionStore';
 import { usePersonaStream } from '../../hooks/usePersonaStream';
+import { hasEmbedModel, DEFAULT_EMBED_MODEL } from '../../services/ollama';
+import { syncExampleBank } from '../../services/personaExamples';
 import styles from './PersonaChat.module.css';
 
 const isTouchDevice = () =>
@@ -16,6 +18,8 @@ export function PersonaChat() {
   const load = usePersonaStore((s) => s.load);
   const setPersonaOpen = useUiStore((s) => s.setPersonaOpen);
   const status = useConnectionStore((s) => s.status);
+  const baseUrl = useConnectionStore((s) => s.baseUrl);
+  const models = useConnectionStore((s) => s.models);
   const { send, isStreaming, abort } = usePersonaStream();
 
   const [value, setValue] = useState('');
@@ -29,6 +33,15 @@ export function PersonaChat() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  // Pre-embed the example bank once connected + an embed model is available, so
+  // the first message doesn't pay the embedding cost. No-op without an embed
+  // model (retrieval falls back to a static example slice).
+  useEffect(() => {
+    if (persona && status === 'connected' && hasEmbedModel(models)) {
+      void syncExampleBank(persona, baseUrl, DEFAULT_EMBED_MODEL).catch(() => {});
+    }
+  }, [persona, status, models, baseUrl]);
 
   // Keep pinned to the newest message.
   useEffect(() => {
