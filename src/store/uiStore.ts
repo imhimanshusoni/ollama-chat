@@ -7,10 +7,12 @@ interface UiState {
   sidebarOpen: boolean;
   settingsOpen: boolean;
   personaOpen: boolean; // the persona ("chat like a real person") space is showing
+  personaCallOpen: boolean; // the voice-call overlay is showing
   toggleTheme: () => void;
   setSidebarOpen: (open: boolean) => void;
   setSettingsOpen: (open: boolean) => void;
   setPersonaOpen: (open: boolean) => void;
+  setPersonaCallOpen: (open: boolean) => void;
 }
 
 function applyTheme(theme: Theme) {
@@ -44,6 +46,7 @@ export const useUiStore = create<UiState>()(
         sidebarOpen: typeof window !== 'undefined' ? window.innerWidth > 768 : true,
         settingsOpen: false,
         personaOpen: false,
+        personaCallOpen: false,
 
         toggleTheme: () =>
           set((state) => {
@@ -55,6 +58,7 @@ export const useUiStore = create<UiState>()(
         setSidebarOpen: (open) => set({ sidebarOpen: open }),
         setSettingsOpen: (open) => set({ settingsOpen: open }),
         setPersonaOpen: (open) => set({ personaOpen: open }),
+        setPersonaCallOpen: (open) => set({ personaCallOpen: open }),
       };
     },
     {

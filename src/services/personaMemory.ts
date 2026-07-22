@@ -27,9 +27,11 @@ export async function updatePersonaMemory(
   const prior = isMeaningfulMemory(existingMemory) ? existingMemory : '';
 
   const prompt =
-    "You maintain a short private memory about the person a friend is texting with. " +
-    "From the conversation below, extract durable facts about THEM — name, work, life, feelings, " +
-    "plans, upcoming events, preferences, and shared history — and merge them with what's already known. " +
+    "You maintain a short private memory about the person a yoga & wellness coach is helping. " +
+    "From the conversation below, extract durable, health-relevant facts about THEM — name, their " +
+    "body/wellness problems (e.g. back pain, stress, poor sleep, PCOD), any injuries, pregnancy, or " +
+    "medical conditions, their goals, what asanas the coach already suggested, and what seemed to help " +
+    "or not — and merge them with what's already known. " +
     "Output ONLY the updated memory as a few short plain factual lines (max ~8). " +
     "No preamble, no placeholders, no quotes. If there is genuinely nothing worth remembering, output a single dash '-'.\n\n" +
     (prior ? `Already known:\n${prior}\n\n` : '') +

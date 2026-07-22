@@ -1,0 +1,138 @@
+/* Full-screen call overlay, layered above the persona chat. */
+.overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-6) var(--space-4) var(--space-5);
+  background: var(--bg-1, var(--bg-body, #0b0b0d));
+  background: linear-gradient(180deg, var(--bg-hover), var(--bg-body, #0b0b0d) 55%);
+  animation: fade 0.2s var(--ease, ease);
+}
+
+@keyframes fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* --- Top: avatar + name + status --- */
+.top {
+  margin-top: var(--space-6);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.avatarRing {
+  width: 8rem;
+  height: 8rem;
+  border-radius: var(--radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-hover);
+  box-shadow: 0 0 0 0 var(--accent);
+}
+
+/* Gentle pulse only while she's speaking. */
+.speaking { animation: pulse 1.6s ease-in-out infinite; }
+
+@keyframes pulse {
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 55%, transparent); }
+  50% { box-shadow: 0 0 0 14px color-mix(in srgb, var(--accent) 0%, transparent); }
+}
+
+.avatar {
+  width: 7rem;
+  height: 7rem;
+  border-radius: var(--radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 3.5rem;
+  background: var(--bg-hover);
+}
+
+.name {
+  font-size: var(--font-lg);
+  font-weight: 600;
+  color: var(--text-1);
+}
+
+.status {
+  font-size: var(--font-sm);
+  color: var(--accent);
+  text-transform: lowercase;
+  min-height: 1.2em;
+}
+.statusError { color: var(--danger, #e5484d); text-transform: none; }
+
+/* --- Middle: live captions --- */
+.captions {
+  flex: 1;
+  width: 100%;
+  max-width: 34rem;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: var(--space-3);
+  padding: var(--space-5) 0;
+}
+
+.captionRow { display: flex; flex-direction: column; gap: 2px; }
+.captionLabel {
+  font-size: var(--font-xs);
+  color: var(--text-3);
+  text-transform: lowercase;
+}
+.captionText {
+  font-size: var(--font-base);
+  line-height: 1.45;
+  color: var(--text-1);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.captionInterim .captionText { color: var(--text-2); font-style: italic; }
+
+/* --- Bottom: controls --- */
+.controls {
+  display: flex;
+  align-items: center;
+  gap: var(--space-6);
+  padding-bottom: var(--space-4);
+}
+
+.controlBtn,
+.endBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  transition: background 0.15s, transform 0.1s, color 0.15s;
+}
+
+.controlBtn {
+  width: 3.5rem;
+  height: 3.5rem;
+  background: var(--bg-hover);
+  color: var(--text-1);
+}
+.controlBtn:hover { background: var(--bg-input); }
+.controlActive { background: var(--text-1); color: var(--bg-body, #0b0b0d); }
+
+.endBtn {
+  width: 4rem;
+  height: 4rem;
+  background: var(--danger, #e5484d);
+  color: #fff;
+}
+.endBtn:hover { filter: brightness(1.08); }
+.controlBtn:active,
+.endBtn:active { transform: scale(0.92); }

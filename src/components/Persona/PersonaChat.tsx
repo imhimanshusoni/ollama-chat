@@ -7,7 +7,10 @@ import { usePersonaStream } from '../../hooks/usePersonaStream';
 import { usePinToBottom } from '../../hooks/usePinToBottom';
 import { hasEmbedModel, DEFAULT_EMBED_MODEL } from '../../services/ollama';
 import { syncExampleBank } from '../../services/personaExamples';
+import { fetchAsanas, syncAsanaBank } from '../../services/asanaKnowledge';
+import { getVoiceSupport } from '../../services/voice/webSpeech';
 import { PersonaAvatar } from './PersonaAvatar';
+import { PersonaCall } from './PersonaCall';
 import styles from './PersonaChat.module.css';
 
 const isTouchDevice = () =>
@@ -19,6 +22,8 @@ export function PersonaChat() {
   const clear = usePersonaStore((s) => s.clear);
   const load = usePersonaStore((s) => s.load);
   const setPersonaOpen = useUiStore((s) => s.setPersonaOpen);
+  const personaCallOpen = useUiStore((s) => s.personaCallOpen);
+  const setPersonaCallOpen = useUiStore((s) => s.setPersonaCallOpen);
   const status = useConnectionStore((s) => s.status);
   const baseUrl = useConnectionStore((s) => s.baseUrl);
   const models = useConnectionStore((s) => s.models);
@@ -26,6 +31,7 @@ export function PersonaChat() {
 
   const [value, setValue] = useState('');
   const [touch] = useState(isTouchDevice);
+  const [voiceSupport] = useState(getVoiceSupport);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const { resize, reset } = useAutoResize(inputRef);
@@ -45,6 +51,13 @@ export function PersonaChat() {
   useEffect(() => {
     if (persona && status === 'connected' && hasEmbedModel(models)) {
       void syncExampleBank(persona, baseUrl, DEFAULT_EMBED_MODEL).catch(() => {});
+      // Also pre-embed the curated asana knowledge base so the first grounded
+      // recommendation doesn't pay the embedding cost. No-op without an embed model.
+      void fetchAsanas()
+        .then((entries) => {
+          if (entries.length > 0) return syncAsanaBank(entries, baseUrl, DEFAULT_EMBED_MODEL);
+        })
+        .catch(() => {});
     }
   }, [persona, status, models, baseUrl]);
 
@@ -93,18 +106,34 @@ export function PersonaChat() {
           <span className={styles.headerName}>{name}</span>
           <span className={styles.headerStatus}>{isStreaming ? 'typing…' : 'online'}</span>
         </div>
-        <button
-          className={styles.clearBtn}
-          onClick={clear}
-          type="button"
-          aria-label="Clear chat"
-          title="Clear chat"
-        >
-          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <polyline points="3 6 5 6 21 6" />
-            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-          </svg>
-        </button>
+        <div className={styles.headerActions}>
+          {voiceSupport.stt && (
+            <button
+              className={styles.callBtn}
+              onClick={() => setPersonaCallOpen(true)}
+              type="button"
+              disabled={notConnected}
+              aria-label={`Call ${name}`}
+              title={notConnected ? 'Not connected' : `Call ${name}`}
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.9.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z" />
+              </svg>
+            </button>
+          )}
+          <button
+            className={styles.clearBtn}
+            onClick={clear}
+            type="button"
+            aria-label="Clear chat"
+            title="Clear chat"
+          >
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="3 6 5 6 21 6" />
+              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+            </svg>
+          </button>
+        </div>
       </header>
 
       <div className={styles.messages} ref={scrollRef}>
@@ -161,6 +190,10 @@ export function PersonaChat() {
           )}
         </button>
       </div>
+
+      {personaCallOpen && persona && (
+        <PersonaCall onClose={() => setPersonaCallOpen(false)} />
+      )}
     </div>
   );
 }

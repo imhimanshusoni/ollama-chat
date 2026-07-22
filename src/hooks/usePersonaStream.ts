@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback } from 'react';
 import { streamChatRaw, hasEmbedModel, DEFAULT_EMBED_MODEL } from '../services/ollama';
 import { syncExampleBank, retrieveExamples } from '../services/personaExamples';
+import { fetchAsanas, syncAsanaBank, retrieveAsanas, asanaKnowledgeBlock } from '../services/asanaKnowledge';
 import { updatePersonaMemory, isMeaningfulMemory } from '../services/personaMemory';
 import {
   detectStyleDirective,
@@ -14,6 +15,7 @@ import type { OllamaMessage } from '../types';
 
 const MAX_HISTORY = 30; // recent persona turns sent each request
 const RETRIEVE_K = 8; // example exchanges retrieved per message
+const RETRIEVE_ASANA_K = 4; // asana knowledge-base entries retrieved per message
 const STATIC_FALLBACK = 16; // examples used when retrieval isn't available (no embed model)
 
 // Background memory update shares one controller so a new send cancels an
@@ -40,14 +42,16 @@ export function usePersonaStream() {
   const controllerRef = useRef<AbortController | null>(null);
   const accRef = useRef('');
 
-  const send = useCallback(async (text: string) => {
+  // Returns the cleaned reply text (also written to the store), or '' if nothing
+  // was produced — the voice-call loop awaits this to know what to speak.
+  const send = useCallback(async (text: string): Promise<string> => {
     const trimmed = text.trim();
-    if (!trimmed) return;
+    if (!trimmed) return '';
 
     const store = usePersonaStore.getState();
     const { persona, memory } = store;
     const { baseUrl, currentModel, models } = useConnectionStore.getState();
-    if (!baseUrl || !currentModel || !persona) return;
+    if (!baseUrl || !currentModel || !persona) return '';
 
     // L1: detect a style directive ("no emoji" etc.) and update persistent
     // style state so it applies this turn and every future one.
@@ -85,6 +89,25 @@ export function usePersonaStream() {
       }
     }
 
+    // Ground her recommendations: retrieve the most relevant asanas from the
+    // curated knowledge base and inject them into the system prompt, so she
+    // recommends real poses (with real steps + cautions) rather than inventing.
+    // Empty when there's no embed model, the fetch fails, or nothing matches —
+    // she then falls back to her general prompt knowledge, still safety-bounded.
+    let asanaBlock = '';
+    if (hasEmbedModel(models)) {
+      try {
+        const entries = await fetchAsanas();
+        if (entries.length > 0) {
+          await syncAsanaBank(entries, baseUrl, DEFAULT_EMBED_MODEL);
+          const asanas = await retrieveAsanas(trimmed, baseUrl, DEFAULT_EMBED_MODEL, RETRIEVE_ASANA_K, controller.signal);
+          asanaBlock = asanaKnowledgeBlock(asanas);
+        }
+      } catch {
+        // no grounding block this turn; her prompt still constrains her
+      }
+    }
+
     // L2: make the conditioning consistent with the active style — strip emoji
     // from the injected examples when the user asked for none, so the examples
     // stop contradicting the instruction (the root cause of the wavering).
@@ -95,6 +118,7 @@ export function usePersonaStream() {
       (isMeaningfulMemory(memory)
         ? `\n\nThings you remember about them (from past chats):\n${memory}`
         : '') +
+      asanaBlock +
       (style.emoji ? '' : '\n\nThis person does not want any emojis. Do not use a single emoji.');
 
     // Exclude the empty assistant placeholder, keep the recent tail.
@@ -106,6 +130,7 @@ export function usePersonaStream() {
     ];
 
     let ok = false;
+    let reply = '';
     try {
       for await (const chunk of streamChatRaw(baseUrl, currentModel, wire, [], false, controller.signal)) {
         if (chunk.content) accRef.current += chunk.content;
@@ -113,13 +138,15 @@ export function usePersonaStream() {
       // L3: deterministically clean the buffered reply — drop self-correction
       // meta-notes, collapse redrafts, enforce the emoji preference — before it
       // ever reaches the UI.
-      usePersonaStore.getState().updateLastMessage(cleanPersonaReply(accRef.current, style) || '…');
+      reply = cleanPersonaReply(accRef.current, style) || '…';
+      usePersonaStore.getState().updateLastMessage(reply);
       ok = true;
     } catch (err) {
       if (err instanceof Error && err.name === 'AbortError') {
         usePersonaStore.getState().removeLastIfEmptyAssistant();
       } else {
-        usePersonaStore.getState().updateLastMessage(accRef.current || '…');
+        reply = accRef.current || '…';
+        usePersonaStore.getState().updateLastMessage(reply);
         usePersonaStore.getState().setLastMessageError(err instanceof Error ? err.message : String(err));
       }
     } finally {
@@ -138,6 +165,8 @@ export function usePersonaStream() {
         }
       );
     }
+
+    return reply;
   }, []);
 
   const abort = useCallback(() => controllerRef.current?.abort(), []);

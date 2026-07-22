@@ -1,0 +1,532 @@
+{
+  "asanas": [
+    {
+      "id": "bhujangasana",
+      "name": "Bhujangasana (Cobra Pose)",
+      "problems": "lower back pain, stiff back, poor posture, slouching, mild stress, tiredness in the spine",
+      "steps": "Lie on your stomach, legs together, forehead on the mat. Place your palms under your shoulders, elbows close to the body. Breathing in, gently press down and lift your chest up, keeping your elbows a little bent and shoulders relaxed away from the ears. Look slightly up, hold for a few breaths, then slowly come down as you breathe out. Do it 3 to 4 times.",
+      "benefits": "strengthens and gently stretches the spine, opens the chest, eases lower-back stiffness, improves posture",
+      "contraindications": "avoid in pregnancy, recent back or abdominal surgery, hernia, or a serious back injury. If it causes sharp pain, stop."
+    },
+    {
+      "id": "marjariasana",
+      "name": "Marjariasana (Cat-Cow Stretch)",
+      "problems": "back pain, stiff spine, neck stiffness, morning stiffness, stress, poor posture",
+      "steps": "Come onto your hands and knees, wrists under shoulders and knees under hips. Breathing in, drop your belly, lift your chest and look gently up (cow). Breathing out, round your back, tuck your chin toward your chest (cat). Move slowly with your breath, 6 to 8 rounds.",
+      "benefits": "loosens the spine and neck, relieves back tension, calms the mind, warms up the body",
+      "contraindications": "if you have a knee injury put a folded blanket under the knees; move gently if you have a neck problem."
+    },
+    {
+      "id": "balasana",
+      "name": "Balasana (Child's Pose)",
+      "problems": "stress, anxiety, tiredness, lower back tension, calming down, headache from tension",
+      "steps": "Kneel on the mat, big toes touching, knees apart. Sit back on your heels and slowly fold forward, resting your forehead on the mat and arms stretched forward or by your sides. Breathe slowly and stay here for 5 to 10 breaths, letting the whole body relax.",
+      "benefits": "calms the nervous system, gently stretches the back and hips, relieves stress and fatigue",
+      "contraindications": "avoid or modify in pregnancy (keep knees wide), and with knee injuries use a cushion under the hips."
+    },
+    {
+      "id": "shavasana",
+      "name": "Shavasana (Corpse Pose)",
+      "problems": "stress, anxiety, poor sleep, insomnia, high mental tension, tiredness, restlessness",
+      "steps": "Lie flat on your back, legs a little apart, arms by your sides with palms facing up. Close your eyes and let your whole body go loose. Breathe naturally and slowly, letting each part of the body relax from feet to head. Stay for 5 to 10 minutes.",
+      "benefits": "deeply relaxes the body and mind, lowers stress, helps with better sleep",
+      "contraindications": "generally safe for everyone; in later pregnancy lie on your side instead of flat on the back."
+    },
+    {
+      "id": "vrikshasana",
+      "name": "Vrikshasana (Tree Pose)",
+      "problems": "poor balance, weak legs, poor focus, posture, feeling scattered",
+      "steps": "Stand tall. Shift your weight onto one leg and place the sole of the other foot on your inner thigh or calf (never on the knee). Bring your palms together at the chest or raise them overhead. Fix your gaze on one point and breathe steadily for a few breaths, then switch sides.",
+      "benefits": "improves balance and focus, strengthens the legs, improves posture and calm",
+      "contraindications": "be careful with a knee or ankle injury; stand near a wall if balance is shaky. Avoid if you have severe low blood pressure or dizziness."
+    },
+    {
+      "id": "setu-bandhasana",
+      "name": "Setu Bandhasana (Bridge Pose)",
+      "problems": "lower back pain, tired legs, mild stress, poor posture, women's health, PCOD support",
+      "steps": "Lie on your back, bend your knees and place your feet flat, hip-width apart, close to your hips. Arms by your sides. Breathing in, gently lift your hips up, keeping thighs parallel. Hold for a few breaths, then slowly lower down as you breathe out. Repeat 3 to 4 times.",
+      "benefits": "strengthens the back and legs, opens the chest, gently stimulates the abdominal area, calms the mind",
+      "contraindications": "avoid with a neck injury or in later pregnancy. Keep the movement gentle if you have any back problem."
+    },
+    {
+      "id": "pawanmuktasana",
+      "name": "Pawanmuktasana (Wind-Relieving Pose)",
+      "problems": "gas, bloating, indigestion, constipation, stomach discomfort, poor digestion",
+      "steps": "Lie on your back. Breathing out, hug both knees into your chest and hold your shins. You can gently rock side to side or lift your head toward your knees. Hold for a few breaths, then release. Do it 2 to 3 times.",
+      "benefits": "helps release gas, improves digestion, gently massages the abdomen, eases the lower back",
+      "contraindications": "avoid in pregnancy, after recent abdominal surgery, or with a hernia. Skip lifting the head if you have a neck issue."
+    },
+    {
+      "id": "anulom-vilom",
+      "name": "Anulom Vilom (Alternate Nostril Breathing)",
+      "problems": "stress, anxiety, poor sleep, racing thoughts, low focus, mild breathlessness, calming down",
+      "steps": "Sit comfortably with a straight back. Close your right nostril with your right thumb and breathe in slowly through the left. Then close the left nostril with your ring finger, release the right, and breathe out through the right. Breathe in through the right, then switch and breathe out through the left. That's one round. Continue gently for 5 minutes.",
+      "benefits": "calms the mind, balances energy, reduces stress and anxiety, helps with focus and sleep",
+      "contraindications": "breathe gently, never force. If you have a cold with a blocked nose or any breathing condition, keep it easy or skip."
+    },
+    {
+      "id": "sukhasana-meditation",
+      "name": "Sukhasana with Mindful Breathing (Easy Seated Pose)",
+      "problems": "stress, anxiety, overthinking, poor focus, emotional tiredness, calming down",
+      "steps": "Sit cross-legged on the floor or on a cushion, spine tall, shoulders relaxed, hands resting on your knees. Close your eyes and just watch your breath going in and out, without changing it. When the mind wanders, gently bring it back to the breath. Stay for 5 to 10 minutes.",
+      "benefits": "calms the mind, reduces stress and anxiety, improves focus and emotional balance",
+      "contraindications": "if sitting cross-legged is hard on the knees or hips, sit on a chair with feet flat instead."
+    },
+    {
+      "id": "viparita-karani",
+      "name": "Viparita Karani (Legs-Up-the-Wall Pose)",
+      "problems": "tired legs, swollen feet, poor sleep, stress, anxiety, long hours of standing or sitting",
+      "steps": "Sit sideways next to a wall, then lie back and swing your legs up so they rest against the wall, hips close to it. Let your arms rest by your sides, close your eyes and breathe slowly. Stay for 5 to 10 minutes, then roll to one side to come up.",
+      "benefits": "relaxes tired legs, calms the nervous system, helps with sleep and stress",
+      "contraindications": "avoid during periods if it feels uncomfortable, and with glaucoma or serious neck/back issues. Come out slowly to avoid dizziness."
+    },
+    {
+      "id": "tadasana",
+      "name": "Tadasana (Mountain Pose)",
+      "problems": "poor posture, slouching, stiffness, low energy, back tiredness",
+      "steps": "Stand with your feet together or hip-width apart, weight even on both feet. Breathing in, raise your arms overhead, interlock the fingers and gently stretch up, lifting from the waist. You can lift the heels a little if comfortable. Hold for a few breaths, then release as you breathe out. Repeat 3 to 4 times.",
+      "benefits": "improves posture, stretches the whole body, boosts energy and awareness",
+      "contraindications": "keep heels down if you have low blood pressure or balance issues. Be gentle with shoulder problems."
+    },
+    {
+      "id": "supta-baddha-konasana",
+      "name": "Supta Baddha Konasana (Reclined Butterfly)",
+      "problems": "menstrual cramps, PCOD, stress, hip tightness, women's health, poor sleep",
+      "steps": "Lie on your back, bend your knees and bring the soles of your feet together, letting the knees fall out to the sides. Support the knees with cushions if they feel too far. Rest your arms by your sides, close your eyes and breathe slowly for 5 to 8 minutes.",
+      "benefits": "gently opens the hips, relaxes the lower abdomen, eases menstrual discomfort and stress",
+      "contraindications": "support the knees with cushions if you have hip or groin issues; in later pregnancy prop the upper body up."
+    },
+    {
+      "id": "utkatasana",
+      "name": "Utkatasana (Chair Pose)",
+      "problems": "weak legs, weak core, poor posture, low stamina, low energy",
+      "steps": "Stand tall with feet together or hip-width apart. Breathing in, raise your arms up alongside your ears. Breathing out, bend your knees and sit back as if lowering onto an invisible chair, keeping the weight in your heels and the chest lifted. Hold for a few breaths, then straighten up.",
+      "benefits": "strengthens the thighs, knees and ankles, tones the core, builds stamina and posture",
+      "contraindications": "go easy or skip with knee pain, low blood pressure or ankle injury; keep the knees behind the toes."
+    },
+    {
+      "id": "virabhadrasana-1",
+      "name": "Virabhadrasana I (Warrior I)",
+      "problems": "weak legs, poor posture, stiff hips and shoulders, low energy",
+      "steps": "From standing, step one foot back and turn it out slightly, keeping the front foot pointing forward. Bend the front knee over the ankle, square the hips forward and reach both arms up overhead. Look forward or gently up, hold for a few breaths, then switch sides.",
+      "benefits": "strengthens the legs, opens the chest and hips, builds focus and stamina",
+      "contraindications": "be careful with knee, hip or shoulder issues and high blood pressure; don't bend the front knee past the ankle."
+    },
+    {
+      "id": "virabhadrasana-2",
+      "name": "Virabhadrasana II (Warrior II)",
+      "problems": "weak legs, poor stamina, stiff hips, low confidence",
+      "steps": "Stand with feet wide apart. Turn the right foot out and bend the right knee over the ankle, keeping the left leg straight. Stretch the arms out to the sides at shoulder height and gaze over the front hand. Hold for a few breaths and switch sides.",
+      "benefits": "strengthens and stretches the legs and hips, opens the chest, builds stamina and focus",
+      "contraindications": "ease off with knee injury or hip pain; keep the bent knee tracking over the ankle."
+    },
+    {
+      "id": "virabhadrasana-3",
+      "name": "Virabhadrasana III (Warrior III)",
+      "problems": "poor balance, weak core and legs, poor focus",
+      "steps": "From standing, shift your weight onto one leg. Breathing out, hinge forward from the hips and lift the other leg straight back until the body forms a T, arms reaching forward or back alongside you. Keep the hips level. Hold a few breaths and switch. Use a wall or chair for support if needed.",
+      "benefits": "improves balance and focus, strengthens the legs, back and core",
+      "contraindications": "skip or use support with low blood pressure, dizziness or back injury."
+    },
+    {
+      "id": "trikonasana",
+      "name": "Trikonasana (Triangle Pose)",
+      "problems": "stiff back and hips, poor digestion, tight hamstrings, mild anxiety",
+      "steps": "Stand with feet wide and turn the right foot out. Reaching to the right, tip from the hip and lower the right hand toward the shin, ankle or a block while stretching the left arm up. Open the chest and look up or forward. Hold a few breaths and switch sides.",
+      "benefits": "stretches the sides, hips and hamstrings, opens the chest, aids digestion",
+      "contraindications": "look down instead of up with neck issues; be gentle with low blood pressure or back problems."
+    },
+    {
+      "id": "utthita-parsvakonasana",
+      "name": "Utthita Parsvakonasana (Extended Side Angle)",
+      "problems": "stiff hips, weak legs, tight waist, sluggish digestion",
+      "steps": "From a wide stance, turn the right foot out and bend the right knee over the ankle. Rest the right forearm on the right thigh or bring the hand to the floor, and sweep the left arm up and over your ear, making a long line from heel to fingertips. Hold and switch sides.",
+      "benefits": "strengthens the legs, stretches the waist and hips, opens the chest",
+      "contraindications": "ease off with knee or hip injury; keep the bent knee over the ankle."
+    },
+    {
+      "id": "prasarita-padottanasana",
+      "name": "Prasarita Padottanasana (Wide-Legged Forward Fold)",
+      "problems": "tight hamstrings, stiff back, stress, mild fatigue, tension headache",
+      "steps": "Stand with feet wide and parallel, hands on the hips. Breathe in and lengthen the spine; breathing out, hinge from the hips and fold forward, bringing the hands to the floor and the crown of the head toward the ground. Keep the legs firm. Hold a few breaths and rise slowly.",
+      "benefits": "stretches the hamstrings and back, calms the mind, gently increases blood flow to the head",
+      "contraindications": "come up slowly with low blood pressure; avoid deep folding with a back injury."
+    },
+    {
+      "id": "uttanasana",
+      "name": "Uttanasana (Standing Forward Bend)",
+      "problems": "stress, tight hamstrings, stiff back, tension headache, anxiety",
+      "steps": "Stand tall. Breathing out, hinge from the hips and fold forward, letting the head and arms hang. Keep a soft bend in the knees if the hamstrings are tight. Relax the neck and hold for a few breaths, then roll up slowly.",
+      "benefits": "stretches the back and hamstrings, calms the nervous system, relieves tension",
+      "contraindications": "bend the knees and rise slowly with back pain, low blood pressure or dizziness."
+    },
+    {
+      "id": "ardha-chandrasana",
+      "name": "Ardha Chandrasana (Half Moon Pose)",
+      "problems": "poor balance, weak legs, poor focus",
+      "steps": "From Triangle on the right, bend the right knee and place the right hand on the floor or a block about a foot ahead. Lift the left leg parallel to the floor, stacking the hips, and reach the left arm up, gazing forward or up. Use a wall behind you for support. Hold and switch sides.",
+      "benefits": "improves balance and coordination, strengthens the legs and core, opens the hips and chest",
+      "contraindications": "use support and look forward with neck or balance issues; skip with low blood pressure."
+    },
+    {
+      "id": "garudasana",
+      "name": "Garudasana (Eagle Pose)",
+      "problems": "poor balance, stiff shoulders and upper back, poor focus",
+      "steps": "Stand and bend the knees slightly. Cross the right thigh over the left and, if you can, hook the right foot behind the left calf. Cross the left arm under the right and wrap the forearms, palms toward each other. Sink down a little, hold, then unwind and switch sides.",
+      "benefits": "improves balance and focus, stretches the shoulders and upper back, strengthens the legs",
+      "contraindications": "just cross the limbs without the full wrap with knee, shoulder or balance problems."
+    },
+    {
+      "id": "natarajasana",
+      "name": "Natarajasana (Dancer Pose)",
+      "problems": "poor balance, stiff hip flexors and shoulders, poor posture",
+      "steps": "Stand tall and shift onto the left leg. Bend the right knee and catch the right ankle or foot behind you with the right hand. Reach the left arm forward, then gently press the foot back and up while leaning slightly forward. Hold with a steady gaze and switch sides.",
+      "benefits": "improves balance and focus, opens the chest, shoulders and hip flexors",
+      "contraindications": "use a wall for support; be careful with back, knee or shoulder issues and low blood pressure."
+    },
+    {
+      "id": "parsvottanasana",
+      "name": "Parsvottanasana (Pyramid Pose)",
+      "problems": "tight hamstrings, stiff hips, poor posture, mild stress",
+      "steps": "From standing, step the left foot back with both feet facing forward and the hips square. Breathing in, lengthen the spine; breathing out, fold forward over the front leg with the hands on the floor or blocks. Keep the front leg straight but not locked. Hold and switch sides.",
+      "benefits": "stretches the hamstrings and hips, improves posture and balance",
+      "contraindications": "keep a soft knee and fold gently with a hamstring or back injury."
+    },
+    {
+      "id": "anjaneyasana",
+      "name": "Anjaneyasana (Low Lunge / Crescent)",
+      "problems": "tight hips and hip flexors, lower back tension, sciatica, desk-job stiffness",
+      "steps": "From a lunge, lower the back knee to the floor and untuck the toes. Slide the back leg back until you feel a stretch at the front of the hip. Rest the hands on the front thigh or reach the arms up overhead, sinking the hips gently forward. Hold and switch sides.",
+      "benefits": "opens tight hip flexors, relieves lower-back tension, improves posture",
+      "contraindications": "pad the back knee with a blanket; ease off with a knee injury."
+    },
+    {
+      "id": "malasana",
+      "name": "Malasana (Garland / Yogi Squat)",
+      "problems": "tight hips and ankles, constipation, sluggish digestion, lower back stiffness",
+      "steps": "Stand with feet a little wider than the hips, toes turned out slightly. Bend the knees and lower into a deep squat, bringing the palms together at the chest and gently pressing the elbows against the inner knees to open the hips. Keep the heels down or on a folded blanket. Hold and rise slowly.",
+      "benefits": "opens the hips, groin and ankles, aids digestion and elimination, eases the lower back",
+      "contraindications": "sit on a block or skip with a knee injury; support the heels if they lift."
+    },
+    {
+      "id": "konasana",
+      "name": "Konasana (Standing Side Bend)",
+      "problems": "stiff waist and back, tight sides, poor posture, sluggish digestion",
+      "steps": "Stand with feet hip-width apart. Breathing in, raise the right arm up beside the ear. Breathing out, bend gently to the left, feeling a stretch along the right side. Come back up with an inhale and switch sides. Move slowly with the breath.",
+      "benefits": "stretches the waist and sides, keeps the spine flexible, aids digestion",
+      "contraindications": "keep the movement small and gentle with back or hip problems."
+    },
+    {
+      "id": "katichakrasana",
+      "name": "Katichakrasana (Standing Spinal Twist)",
+      "problems": "stiff back and waist, poor digestion, desk stiffness",
+      "steps": "Stand with feet about shoulder-width apart and arms stretched out in front at shoulder height. Breathing out, twist gently to the right from the waist, letting the arms swing and looking over the right shoulder. Come back to center with an inhale and twist to the left, keeping the hips facing forward.",
+      "benefits": "loosens the spine and waist, improves digestion, relieves stiffness",
+      "contraindications": "twist gently and slowly with back or spinal issues; avoid in pregnancy."
+    },
+    {
+      "id": "dandasana",
+      "name": "Dandasana (Staff Pose)",
+      "problems": "poor posture, weak back, slouching",
+      "steps": "Sit on the floor with the legs stretched out straight in front and the feet flexed. Place the hands beside the hips, press down and lift the spine tall, opening the chest and drawing the shoulders back. Hold, breathing steadily. This is the base for many seated poses.",
+      "benefits": "improves posture, strengthens the back and core, prepares the body for forward bends",
+      "contraindications": "sit on a folded blanket and soften the knees if the hamstrings are tight or the low back rounds."
+    },
+    {
+      "id": "paschimottanasana",
+      "name": "Paschimottanasana (Seated Forward Bend)",
+      "problems": "tight hamstrings and back, stress, poor digestion, poor sleep",
+      "steps": "Sit with the legs straight in front. Breathing in, lengthen the spine and raise the arms; breathing out, hinge from the hips and reach toward the feet, holding the shins, ankles or feet. Keep the spine long rather than rounding. Hold and breathe, then rise slowly.",
+      "benefits": "stretches the whole back body, calms the mind, aids digestion and sleep",
+      "contraindications": "bend the knees and keep the back long with a back injury; avoid deep folding in pregnancy."
+    },
+    {
+      "id": "janu-sirsasana",
+      "name": "Janu Sirsasana (Head-to-Knee Pose)",
+      "problems": "tight hamstrings, stiff back and hips, stress, mild anxiety",
+      "steps": "Sit with the right leg straight and bend the left knee, placing the left sole against the right inner thigh. Breathing in, lengthen up; breathing out, fold over the straight leg, reaching for the foot or shin. Keep the spine long. Hold and switch sides.",
+      "benefits": "stretches the hamstrings and back, opens the hips, calms the mind",
+      "contraindications": "use a strap around the foot and keep the back long with tight hamstrings or back issues."
+    },
+    {
+      "id": "baddha-konasana",
+      "name": "Baddha Konasana (Bound Angle / Butterfly)",
+      "problems": "tight hips and inner thighs, PCOD, menstrual discomfort, desk stiffness",
+      "steps": "Sit tall and bring the soles of the feet together, letting the knees fall out to the sides. Hold the feet and gently let the knees relax down; you can slowly flutter them like butterfly wings. Keep the spine long and breathe. To deepen, fold forward slightly.",
+      "benefits": "opens the hips and inner thighs, supports pelvic and reproductive health, relieves menstrual discomfort",
+      "contraindications": "sit on a cushion and support the knees with tight hips or a knee or groin injury."
+    },
+    {
+      "id": "upavistha-konasana",
+      "name": "Upavistha Konasana (Wide-Angle Seated Forward Bend)",
+      "problems": "tight hamstrings and inner thighs, stiff hips, stress",
+      "steps": "Sit and open the legs wide with the toes pointing up. Press the thighs down, lengthen the spine and walk the hands forward, folding from the hips while keeping the back long. Go only as far as is comfortable. Hold and rise slowly.",
+      "benefits": "stretches the inner thighs and hamstrings, opens the hips, calms the mind",
+      "contraindications": "sit on a blanket and keep the fold gentle with a hamstring or back injury."
+    },
+    {
+      "id": "gomukhasana",
+      "name": "Gomukhasana (Cow Face Pose)",
+      "problems": "stiff shoulders and hips, poor posture, tight chest from desk work",
+      "steps": "Sit and stack the right knee over the left with the feet beside the opposite hips (or keep the legs simple if that is hard). Reach the right arm up, bend the elbow and drop the hand down the back; bring the left hand up the back to clasp the fingers, or hold a strap between them. Hold and switch sides.",
+      "benefits": "opens the shoulders, chest and hips, improves posture",
+      "contraindications": "use a strap between the hands and keep the legs simple with knee or hip issues."
+    },
+    {
+      "id": "vajrasana",
+      "name": "Vajrasana (Thunderbolt / Kneeling Pose)",
+      "problems": "poor digestion, bloating after meals, restlessness",
+      "steps": "Kneel with the knees together and sit back on the heels, tops of the feet flat on the floor. Rest the hands on the thighs, keep the spine tall and breathe slowly. This is one of the few poses you can safely do just after a meal.",
+      "benefits": "aids digestion, calms the mind, gently stretches the ankles and knees",
+      "contraindications": "place a cushion between the hips and heels, or skip, with a knee or ankle injury."
+    },
+    {
+      "id": "padmasana",
+      "name": "Padmasana (Lotus Pose)",
+      "problems": "restlessness, poor focus, need for a steady meditation seat",
+      "steps": "Sit and place the right foot on top of the left thigh, then the left foot on top of the right thigh, soles turned up. Rest the hands on the knees with the spine tall. If full lotus is hard, use half lotus or simple cross-legged instead. Hold for meditation or breathing.",
+      "benefits": "steadies the body and mind for meditation, improves posture and focus",
+      "contraindications": "avoid with a knee or ankle injury; never force the knees down — use half lotus or Sukhasana instead."
+    },
+    {
+      "id": "eka-pada-rajakapotasana",
+      "name": "Eka Pada Rajakapotasana (Pigeon Pose)",
+      "problems": "tight hips and glutes, sciatica, lower back tension, desk-job stiffness",
+      "steps": "From hands and knees, bring the right knee forward behind the right wrist with the shin at an angle, and slide the left leg straight back. Keep the hips square and stay upright on the hands, or fold forward over the front leg. Hold and switch sides.",
+      "benefits": "deeply opens the hips and glutes, relieves lower-back and sciatic tension",
+      "contraindications": "place a cushion under the front hip; be careful with a knee injury and never force the front knee."
+    },
+    {
+      "id": "mandukasana",
+      "name": "Mandukasana (Frog Pose)",
+      "problems": "poor digestion, bloating, tight hips, diabetes support",
+      "steps": "In the gentle seated form, sit in Vajrasana, make fists and press them into the abdomen near the navel, then fold forward with an exhale to gently compress the belly. Hold a few breaths and rise. Move slowly.",
+      "benefits": "massages the abdominal organs, aids digestion, supports pancreatic function, opens the hips",
+      "contraindications": "avoid in pregnancy, with an abdominal injury, or with serious knee problems."
+    },
+    {
+      "id": "ananda-balasana",
+      "name": "Ananda Balasana (Happy Baby Pose)",
+      "problems": "lower back tension, tight hips, stress, poor sleep",
+      "steps": "Lie on your back and hug both knees in. Take hold of the outer edges of the feet (or the shins) and open the knees toward the armpits, keeping the shins vertical and the lower back on the floor. Gently rock side to side, breathe and relax.",
+      "benefits": "releases the lower back and hips, calms the mind, relieves tiredness",
+      "contraindications": "hold behind the thighs instead with tight hips; avoid in later pregnancy or with a knee injury."
+    },
+    {
+      "id": "ardha-matsyendrasana",
+      "name": "Ardha Matsyendrasana (Seated Spinal Twist)",
+      "problems": "stiff back and spine, poor digestion, sluggishness, desk stiffness",
+      "steps": "Sit with the legs out. Bend the right knee and place the right foot outside the left thigh; keep the left leg straight or bend the left knee in. Inhale to lengthen; exhale and twist to the right, the left elbow outside the right knee and the right hand behind you. Look over the right shoulder. Hold and switch sides.",
+      "benefits": "keeps the spine supple, massages the abdominal organs, improves digestion",
+      "contraindications": "twist gently with back or spinal disc issues; avoid deep twists in pregnancy."
+    },
+    {
+      "id": "bharadvajasana",
+      "name": "Bharadvajasana (Gentle Seated Twist)",
+      "problems": "stiff back, lower back tension, poor digestion, pregnancy-safe gentle twist",
+      "steps": "Sit with both legs folded to one side, resting on one hip. Place one hand on the opposite knee and the other behind you. Inhale to lengthen the spine and exhale to twist gently toward the back hand, keeping the movement soft. Hold and switch sides.",
+      "benefits": "gently mobilises the spine, relieves back and neck tension, aids digestion",
+      "contraindications": "keep it very gentle with a back injury and move slowly."
+    },
+    {
+      "id": "supta-matsyendrasana",
+      "name": "Supta Matsyendrasana (Reclined Spinal Twist)",
+      "problems": "lower back tension, stiff spine, poor sleep, stress, poor digestion",
+      "steps": "Lie on your back and hug both knees in. Let the knees drop to the right while turning the head to the left and stretching the arms out in a T. Keep both shoulders on the floor and breathe into the stretch. Hold, then switch sides.",
+      "benefits": "releases the spine and lower back, calms the body, aids digestion and sleep",
+      "contraindications": "keep the knees supported on a cushion with back issues; a gentle, restorative twist."
+    },
+    {
+      "id": "ustrasana",
+      "name": "Ustrasana (Camel Pose)",
+      "problems": "poor posture, rounded shoulders, stiff back, low energy, mild low mood",
+      "steps": "Kneel with the knees hip-width apart and the tops of the feet down (or toes tucked). Bring the hands to the lower back, lift the chest and gently arch back, reaching the hands toward the heels if comfortable. Keep the neck long. Hold a few breaths and come up slowly using the core.",
+      "benefits": "opens the chest and front body, improves posture, energises and lifts the mood",
+      "contraindications": "keep the hands on the lower back and don't drop the head back with neck, back or blood-pressure issues; avoid in pregnancy."
+    },
+    {
+      "id": "dhanurasana",
+      "name": "Dhanurasana (Bow Pose)",
+      "problems": "poor posture, stiff back, sluggish digestion, low energy",
+      "steps": "Lie on your stomach, bend the knees and reach back to hold the ankles. Breathing in, lift the chest and thighs off the floor, drawing the feet up and back so the body curves like a bow. Look forward, hold for a few breaths, then release slowly.",
+      "benefits": "opens the chest and front body, strengthens the back, stimulates digestion",
+      "contraindications": "avoid with back or neck injury, hernia, high blood pressure, or in pregnancy."
+    },
+    {
+      "id": "salabhasana",
+      "name": "Salabhasana (Locust Pose)",
+      "problems": "lower back weakness, poor posture, stiff back",
+      "steps": "Lie on your stomach with the arms alongside the body, palms down or facing up. Breathing in, lift the head, chest and both legs off the floor, reaching back through the toes and keeping the neck long. Hold for a few breaths and lower slowly. You can start by lifting just the legs or just the chest.",
+      "benefits": "strengthens the lower back, glutes and legs, improves posture",
+      "contraindications": "lift gently or one part at a time with a back injury; avoid in pregnancy or with serious back problems."
+    },
+    {
+      "id": "matsyasana",
+      "name": "Matsyasana (Fish Pose)",
+      "problems": "rounded shoulders, stiff neck and upper back, tight chest, low energy, shallow breathing",
+      "steps": "Lie on your back, legs straight, hands tucked under the hips palms down. Press the forearms and elbows into the floor, lift the chest and gently take the crown of the head back toward the floor. Keep most of the weight on the elbows, not the head. Hold and release.",
+      "benefits": "opens the chest and throat, stretches the neck and shoulders, improves breathing",
+      "contraindications": "keep the head supported and don't strain the neck; avoid with neck injury, migraine, or high or low blood pressure."
+    },
+    {
+      "id": "urdhva-mukha-svanasana",
+      "name": "Urdhva Mukha Svanasana (Upward-Facing Dog)",
+      "problems": "poor posture, stiff back, low energy",
+      "steps": "Lie on your stomach with the hands beside the lower ribs. Press into the hands, straighten the arms and lift the chest and thighs off the floor, so only the tops of the feet and the palms touch down. Roll the shoulders back and look forward. Hold briefly and lower.",
+      "benefits": "strengthens the arms and back, opens the chest, improves posture",
+      "contraindications": "keep the thighs down (do Cobra instead) with back injury, wrist pain, or in pregnancy."
+    },
+    {
+      "id": "sphinx",
+      "name": "Sphinx Pose (Salamba Bhujangasana)",
+      "problems": "lower back tension, poor posture, gentle backbend for beginners",
+      "steps": "Lie on your stomach and prop yourself on the forearms with the elbows under the shoulders and the forearms parallel. Press the forearms down, lengthen through the spine and lift the chest gently, keeping the shoulders relaxed. Hold and breathe — this is a mild, supported backbend.",
+      "benefits": "gently strengthens and mobilises the lower back, opens the chest, improves posture",
+      "contraindications": "a gentle pose, but ease off if it pinches the low back; avoid in pregnancy."
+    },
+    {
+      "id": "phalakasana",
+      "name": "Phalakasana (Plank Pose)",
+      "problems": "weak core, weak arms and back, poor posture",
+      "steps": "From hands and knees, step the feet back so the body is one straight line from head to heels, hands under the shoulders. Firm the belly, keep the hips level (not sagging or lifting) and the neck long. Hold for a few breaths, dropping the knees down if needed.",
+      "benefits": "strengthens the core, arms, shoulders and back, improves posture and stability",
+      "contraindications": "drop the knees down with wrist, shoulder or back issues; avoid with high blood pressure."
+    },
+    {
+      "id": "vasisthasana",
+      "name": "Vasisthasana (Side Plank)",
+      "problems": "weak core and arms, poor balance",
+      "steps": "From plank, shift onto the outer edge of the right foot and stack the left foot on top, turning the body to the side and lifting the left arm up. Keep the body in one line and the hips lifted. For an easier version, drop the bottom knee down. Hold and switch sides.",
+      "benefits": "strengthens the core, arms, wrists and legs, improves balance",
+      "contraindications": "use the knee-down version with wrist or shoulder injury; skip with serious wrist problems."
+    },
+    {
+      "id": "navasana",
+      "name": "Navasana (Boat Pose)",
+      "problems": "weak core, weak hip flexors, sluggish digestion",
+      "steps": "Sit and lean back slightly, lifting the feet off the floor and bringing the shins parallel to the ground, arms reaching forward. Balance on the sitting bones with a lifted chest and firm belly. For more challenge straighten the legs; to ease, keep the toes lightly down. Hold and release.",
+      "benefits": "strengthens the core and hip flexors, aids digestion, builds focus",
+      "contraindications": "keep the toes down or the knees bent with back issues; avoid in pregnancy, with a hernia, or during periods if uncomfortable."
+    },
+    {
+      "id": "adho-mukha-svanasana",
+      "name": "Adho Mukha Svanasana (Downward-Facing Dog)",
+      "problems": "stiff back and shoulders, tight hamstrings, low energy, mild headache, poor circulation",
+      "steps": "From hands and knees, tuck the toes and lift the hips up and back, straightening the legs into an inverted V. Press the hands down, lengthen the spine and let the heels reach toward the floor. Keep a soft bend in the knees if the hamstrings are tight. Hold and breathe.",
+      "benefits": "stretches the whole back body, strengthens the arms and legs, energises and calms",
+      "contraindications": "bend the knees with tight hamstrings; be careful with wrist injury, high blood pressure, or late pregnancy."
+    },
+    {
+      "id": "sarvangasana",
+      "name": "Sarvangasana (Shoulder Stand)",
+      "problems": "poor circulation, fatigue, mild stress, tired legs",
+      "steps": "This is an intermediate pose — learn it with a teacher. Lie on your back, lift the legs and hips up and support the back with the hands, bringing the body toward vertical with the weight on the shoulders (never the neck). Keep the neck still and gaze toward the toes. Come down slowly, one part of the back at a time.",
+      "benefits": "improves circulation, calms the nervous system, relieves tired legs",
+      "contraindications": "avoid with neck or back injury, high blood pressure, glaucoma, during periods or in pregnancy — try Legs-Up-the-Wall instead."
+    },
+    {
+      "id": "halasana",
+      "name": "Halasana (Plow Pose)",
+      "problems": "stiff back and shoulders, poor sleep, stress, tight hamstrings",
+      "steps": "An intermediate pose — learn it with guidance. From Shoulder Stand or lying down, take the legs up and over the head, bringing the toes toward the floor behind you while supporting the back with the hands. Keep the neck relaxed and still. Hold briefly and roll down slowly and with control.",
+      "benefits": "stretches the back and shoulders, calms the mind, can help with sleep",
+      "contraindications": "avoid with neck or back injury, high blood pressure, during periods or in pregnancy; rest the feet on a chair if the floor is too far."
+    },
+    {
+      "id": "makarasana",
+      "name": "Makarasana (Crocodile Pose)",
+      "problems": "lower back tension, stress, fatigue, high blood pressure",
+      "steps": "Lie on your stomach and stack the forearms, resting the forehead on the arms. Let the feet turn out and the whole body relax into the floor. Simply breathe slowly into the belly and let go of tension. Stay for a few minutes — this is a resting pose.",
+      "benefits": "relaxes the lower back and whole body, relieves stress and fatigue, calms the mind",
+      "contraindications": "generally very safe; in later pregnancy rest on the side instead of lying on the belly."
+    },
+    {
+      "id": "surya-namaskar",
+      "name": "Surya Namaskar (Sun Salutation)",
+      "problems": "low energy, poor flexibility, weight management, sluggish mornings, overall fitness",
+      "steps": "A flowing sequence of about twelve linked poses done with the breath — standing prayer, arms up, forward fold, lunge, plank, low hold, cobra or upward dog, downward dog, lunge, forward fold, arms up, and back to standing. Move smoothly, one breath per movement, and repeat several rounds. Best done slowly while learning.",
+      "benefits": "warms up and stretches the whole body, builds strength and stamina, boosts energy and circulation, supports weight management",
+      "contraindications": "go slowly and skip the deep backbends with back, wrist or heart issues, high blood pressure, or in pregnancy; learn the sequence with guidance."
+    },
+    {
+      "id": "kapalbhati",
+      "name": "Kapalbhati (Skull-Shining Breath)",
+      "problems": "sluggish digestion, low energy, brain fog, weight management",
+      "steps": "Sit tall and comfortable. Take a normal breath in, then do a series of short, sharp exhales through the nose by quickly drawing the belly in, letting the inhale happen passively between each. Start with 20 to 30 strokes, rest, and repeat a couple of rounds. Keep the face and shoulders relaxed.",
+      "benefits": "energises the body, clears the mind, tones the abdomen, aids digestion",
+      "contraindications": "avoid with high blood pressure, heart problems, hernia, during periods or in pregnancy; stop if you feel dizzy."
+    },
+    {
+      "id": "bhramari",
+      "name": "Bhramari (Humming Bee Breath)",
+      "problems": "stress, anxiety, anger, poor sleep, high blood pressure, racing thoughts",
+      "steps": "Sit comfortably and close the eyes. Gently close the ears with the thumbs and rest the fingers on the face, or simply relax the hands. Breathe in, then breathe out slowly while making a soft, steady humming sound like a bee, feeling the gentle vibration in the head. Repeat for 5 to 7 rounds.",
+      "benefits": "calms the mind quickly, relieves stress, anxiety and anger, helps with sleep and blood pressure",
+      "contraindications": "very safe and gentle; simply do it seated and don't strain the voice."
+    },
+    {
+      "id": "ujjayi",
+      "name": "Ujjayi (Ocean / Victorious Breath)",
+      "problems": "stress, poor focus, restlessness, need to calm down",
+      "steps": "Sit or lie comfortably. Breathe slowly through the nose while slightly narrowing the back of the throat, so the breath makes a soft ocean-like sound both in and out. Keep the breath smooth and even, without straining. Continue for a few minutes.",
+      "benefits": "calms and focuses the mind, steadies the breath, reduces stress",
+      "contraindications": "keep the sound and effort gentle; ease off if it feels like straining the throat."
+    },
+    {
+      "id": "sheetali",
+      "name": "Sheetali (Cooling Breath)",
+      "problems": "body heat, acidity, stress, irritability, hot-weather discomfort",
+      "steps": "Sit comfortably. Roll the tongue into a tube (or if you can't, just part the teeth slightly). Breathe in slowly through the rolled tongue or teeth, feeling the cool air, then close the mouth and breathe out gently through the nose. Repeat for a few minutes.",
+      "benefits": "cools the body and mind, soothes acidity, reduces stress and irritability",
+      "contraindications": "avoid in very cold weather, with a cold or cough, or with low blood pressure."
+    },
+    {
+      "id": "bhastrika",
+      "name": "Bhastrika (Bellows Breath)",
+      "problems": "low energy, sluggishness, brain fog, cold hands and feet",
+      "steps": "Sit tall. Breathe forcefully and equally in and out through the nose, moving the belly and chest like a bellows, at a steady comfortable pace. Do about 10 to 15 breaths, then rest and breathe normally. Repeat a round or two. Keep it vigorous but controlled.",
+      "benefits": "energises the whole system, warms the body, clears the mind",
+      "contraindications": "avoid with high blood pressure, heart problems, hernia, during periods or in pregnancy; start slowly and stop if dizzy."
+    },
+    {
+      "id": "yoga-nidra",
+      "name": "Yoga Nidra (Yogic Sleep)",
+      "problems": "insomnia, poor sleep, stress, anxiety, burnout, deep fatigue",
+      "steps": "Lie down in Shavasana, cover yourself and get warm and comfortable. Following a slow guided practice, move your awareness gently through each part of the body, then to the breath, staying relaxed but awake. Let the body sleep while the mind rests. A session lasts 15 to 40 minutes.",
+      "benefits": "deeply relaxes the body and mind, improves sleep, relieves stress and anxiety, restores energy",
+      "contraindications": "very safe; simply lie on the side with support in later pregnancy if lying flat is uncomfortable."
+    },
+    {
+      "id": "griva-sanchalana",
+      "name": "Griva Sanchalana (Neck Movements)",
+      "problems": "neck stiffness, shoulder tension, tension headache, desk-job and screen strain",
+      "steps": "Sit or stand tall. Slowly drop the chin toward the chest and then gently take the head back, a few times. Then tilt the right ear toward the right shoulder and the left ear toward the left, and finally turn to look over each shoulder. Move slowly with the breath, never forcing. A few rounds.",
+      "benefits": "releases neck and shoulder stiffness, relieves tension headaches, great for desk workers",
+      "contraindications": "keep the movements small, slow and gentle; avoid full backward rolls with neck injury or cervical problems."
+    },
+    {
+      "id": "skandha-chakra",
+      "name": "Skandha Chakra (Shoulder Rotations)",
+      "problems": "stiff shoulders, upper back tension, poor posture, desk-job strain",
+      "steps": "Sit or stand tall. Place the fingertips on the shoulders and draw big slow circles with the elbows, forward several times and then backward several times, feeling the shoulder blades move. Breathe naturally and keep the movement smooth.",
+      "benefits": "loosens stiff shoulders, relieves upper-back tension, improves posture and circulation",
+      "contraindications": "keep the circles gentle with a shoulder injury and stop if there is sharp pain."
+    },
+    {
+      "id": "parighasana",
+      "name": "Parighasana (Gate Pose)",
+      "problems": "tight waist and sides, stiff spine, shallow breathing, desk stiffness",
+      "steps": "Kneel and stretch the right leg out to the side, foot flat and toes forward. Rest the right hand on the right leg and sweep the left arm up and over toward the right, bending sideways and opening the left side of the body. Breathe into the stretched side, then switch sides.",
+      "benefits": "stretches the sides and waist, opens the chest for deeper breathing, keeps the spine supple",
+      "contraindications": "pad the kneeling knee; move gently with knee or back issues."
+    },
+    {
+      "id": "simhasana",
+      "name": "Simhasana (Lion Pose)",
+      "problems": "throat tension, stress, jaw tightness, facial tension, low confidence",
+      "steps": "Sit in Vajrasana or cross-legged with the hands on the knees. Breathe in through the nose, then open the mouth wide, stick the tongue out and down, widen the eyes and breathe out forcefully with a 'haa' sound from the throat. Relax and repeat a few times.",
+      "benefits": "releases tension in the face, jaw and throat, relieves stress, refreshes the mind",
+      "contraindications": "very safe; simply skip the strong gaze if it strains the eyes."
+    }
+  ]
+}

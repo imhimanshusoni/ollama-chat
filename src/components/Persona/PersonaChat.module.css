@@ -4,6 +4,7 @@
   height: 100%;
   min-height: 0;
   flex: 1;
+  position: relative; /* anchor for the full-screen call overlay */
 }
 
 /* --- Header --- */
@@ -17,7 +18,8 @@
 }
 
 .backBtn,
-.clearBtn {
+.clearBtn,
+.callBtn {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -33,8 +35,18 @@
 }
 
 .backBtn:hover,
-.clearBtn:hover { background: var(--bg-hover); color: var(--text-1); }
-.clearBtn { margin-left: auto; }
+.clearBtn:hover,
+.callBtn:hover { background: var(--bg-hover); color: var(--text-1); }
+
+.callBtn:disabled { opacity: 0.4; cursor: not-allowed; }
+.callBtn:not(:disabled):hover { color: var(--accent); }
+
+.headerActions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
 
 .headerAvatar {
   display: flex;
