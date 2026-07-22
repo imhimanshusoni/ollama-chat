@@ -5,11 +5,12 @@ import type {
   OllamaToolCall,
 } from '../types';
 
-// Keep the model resident in VRAM so Ollama doesn't unload it after its
-// default ~5min idle — an unload forces a slow multi-second reload on the next
-// message. -1 pins it loaded indefinitely. Sent on every chat request and on
-// warm-up. Change to a duration (e.g. '30m') if you'd rather it free VRAM.
-const KEEP_ALIVE = -1;
+// Keep the model resident in VRAM for a bounded idle window so quick
+// back-and-forth messages don't each pay a reload — but let Ollama unload it
+// after 5m of inactivity instead of holding it forever. Cold-start reload on
+// this setup is ~1-2s, so a short window is enough to avoid the pointless
+// permanent VRAM/RAM hold. Sent on every chat request and on warm-up.
+const KEEP_ALIVE = '5m';
 
 // Context window. Ollama's default (~4096) is quickly exhausted by a long
 // conversation: the prompt fills the window, leaving almost no room to
