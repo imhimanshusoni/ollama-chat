@@ -103,3 +103,16 @@
   30% { opacity: 0.8; }
   100% { opacity: 0; transform: translateY(-3px); }
 }
+
+.still,
+.still * {
+  animation: none !important;
+}
+
+/* Reduced motion: keep the sleep bubbles visible, just still. */
+@media (prefers-reduced-motion: reduce) {
+  .zzz circle {
+    animation: none !important;
+    opacity: 0.7;
+  }
+}

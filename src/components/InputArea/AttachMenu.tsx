@@ -1,4 +1,4 @@
-import { useRef, useState, useCallback } from 'react';
+import { useRef, useState, useCallback, type KeyboardEvent } from 'react';
 import { useConnectionStore } from '../../store/connectionStore';
 import { useDocStore } from '../../store/docStore';
 import { useClickOutside } from '../../hooks/useClickOutside';
@@ -19,8 +19,17 @@ export function AttachMenu({ pendingDocIds, onAddDoc, onImageFiles, imagesRemain
   const rootRef = useRef<HTMLDivElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const docInputRef = useRef<HTMLInputElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
   const close = useCallback(() => setOpen(false), []);
   useClickOutside(rootRef, close);
+
+  // Escape closes the popover and hands focus back to its trigger.
+  const handleKeyDown = useCallback((e: KeyboardEvent) => {
+    if (e.key !== 'Escape' || !open) return;
+    e.stopPropagation();
+    setOpen(false);
+    triggerRef.current?.focus();
+  }, [open]);
 
   const baseUrl = useConnectionStore((s) => s.baseUrl);
   const models = useConnectionStore((s) => s.models);
@@ -52,7 +61,7 @@ export function AttachMenu({ pendingDocIds, onAddDoc, onImageFiles, imagesRemain
   );
 
   return (
-    <div className={styles.root} ref={rootRef}>
+    <div className={styles.root} ref={rootRef} onKeyDown={handleKeyDown}>
       {open && (
         <div className={styles.popover} role="menu">
           <div className={styles.tiles}>
@@ -116,6 +125,7 @@ export function AttachMenu({ pendingDocIds, onAddDoc, onImageFiles, imagesRemain
         tabIndex={-1}
       />
       <button
+        ref={triggerRef}
         type="button"
         className={`${styles.attachBtn} ${badge > 0 ? styles.attachBtnActive : ''}`}
         onClick={() => setOpen((o) => !o)}

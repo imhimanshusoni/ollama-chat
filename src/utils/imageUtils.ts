@@ -1,5 +1,3 @@
-import heic2any from 'heic2any';
-
 const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB
 const MAX_DIMENSION = 1024;
 const ALLOWED_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/gif'];
@@ -13,6 +11,8 @@ function isHeic(file: File): boolean {
 }
 
 export async function convertHeicToJpeg(file: File): Promise<File> {
+  // Loaded on first HEIC attach only — the library is ~1.3 MB.
+  const { default: heic2any } = await import('heic2any');
   const blob = await heic2any({ blob: file, toType: 'image/jpeg', quality: 0.9 });
   const resultBlob = Array.isArray(blob) ? blob[0] : blob;
   const name = file.name.replace(/\.(heic|heif)$/i, '.jpg');

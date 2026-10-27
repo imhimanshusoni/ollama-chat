@@ -30,6 +30,10 @@
 .assistant .body {
   max-width: 100%;
   position: relative;
+  /* Clip wide content sideways, but leave room for the actions row, which
+     hangs a little left of the text edge. */
+  overflow-x: clip;
+  overflow-clip-margin: var(--space-3);
 }
 
 .body {
@@ -39,7 +43,6 @@
   min-width: 0;
   max-width: 100%;
   overflow-wrap: break-word;
-  overflow-x: hidden;
 }
 
 /* --- Attached images --- */
@@ -81,6 +84,7 @@
 
 /* --- Tool calls (quiet, one-line summaries that expand) --- */
 .toolCalls {
+  font-family: var(--font-sans);
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
@@ -184,9 +188,7 @@
 
 .toolLabel {
   font-size: var(--font-xs);
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
+  font-weight: 500;
   color: var(--text-3);
 }
 
@@ -413,5 +415,14 @@
     opacity: 0.6;
     position: static;
     margin-top: var(--space-2);
+  }
+}
+
+/* Reply and edit actions: 44px touch targets on coarse pointers. */
+@media (pointer: coarse) {
+  .copyBtn,
+  .editBtn {
+    width: 2.75rem;
+    height: 2.75rem;
   }
 }

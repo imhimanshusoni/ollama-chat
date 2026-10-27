@@ -16,9 +16,22 @@ export interface PersonaVoice {
   gender?: 'female' | 'male' | 'any'; // preferred voice gender, default 'female' (Ananya)
 }
 
+// Occasional unprompted surprises ("spice"). Each user turn rolls `chance`; on
+// a hit one move is picked at random and added to that turn's instructions.
+export interface PersonaSpice {
+  chance: number; // 0–1 per eligible turn
+  moves: string[];
+}
+
 export interface Persona {
   name: string;
-  avatar: string; // emoji or short label shown in the header/bubbles
+  avatar: string; // 'mascot', an image URL / data URI, or an emoji
+  // Optional grounding knowledge base retrieved per message. Only 'asanas'
+  // (config/asanas.json) exists today; omit for none.
+  knowledgeBase?: 'asanas';
+  spice?: PersonaSpice;
+  // What long-term memory should capture about the user (personaMemory.ts).
+  memoryFocus?: string;
   systemPrompt: string;
   // Example exchange bank (alternating user/assistant). Embedded and retrieved
   // per message (personaExamples.ts) so the persona can draw on a large set of
@@ -48,6 +61,14 @@ function sanitizeVoice(v: unknown): PersonaVoice | undefined {
   return Object.keys(out).length ? out : undefined;
 }
 
+function sanitizeSpice(v: unknown): PersonaSpice | undefined {
+  if (!v || typeof v !== 'object') return undefined;
+  const o = v as Record<string, unknown>;
+  const moves = Array.isArray(o.moves) ? o.moves.filter((m): m is string => typeof m === 'string' && m.trim() !== '') : [];
+  const chance = typeof o.chance === 'number' ? Math.min(1, Math.max(0, o.chance)) : 0;
+  return moves.length && chance > 0 ? { chance, moves } : undefined;
+}
+
 const PERSONA_RAW_URL =
   'https://raw.githubusercontent.com/imhimanshusoni/ollama-chat/main/config/persona.json';
 
@@ -67,6 +88,9 @@ export async function fetchPersona(): Promise<Persona | null> {
       examples: Array.isArray(data.examples) ? data.examples : [],
       memoryEnabled: data.memoryEnabled !== false, // default on
       voice: sanitizeVoice(data.voice),
+      knowledgeBase: data.knowledgeBase === 'asanas' ? 'asanas' : undefined,
+      spice: sanitizeSpice(data.spice),
+      memoryFocus: typeof data.memoryFocus === 'string' && data.memoryFocus.trim() ? data.memoryFocus : undefined,
     };
   } catch {
     return null;

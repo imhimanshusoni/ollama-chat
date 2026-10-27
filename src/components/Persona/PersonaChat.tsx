@@ -51,6 +51,7 @@ export function PersonaChat() {
   useEffect(() => {
     if (persona && status === 'connected' && hasEmbedModel(models)) {
       void syncExampleBank(persona, baseUrl, DEFAULT_EMBED_MODEL).catch(() => {});
+      if (persona.knowledgeBase !== 'asanas') return;
       // Also pre-embed the curated asana knowledge base so the first grounded
       // recommendation doesn't pay the embedding cost. No-op without an embed model.
       void fetchAsanas()
@@ -101,7 +102,7 @@ export function PersonaChat() {
             <polyline points="15 18 9 12 15 6" />
           </svg>
         </button>
-        <PersonaAvatar avatar={avatar} className={styles.headerAvatar} />
+        <PersonaAvatar avatar={avatar} className={styles.headerAvatar} mood={isStreaming ? 'thinking' : 'idle'} />
         <div className={styles.headerText}>
           <span className={styles.headerName}>{name}</span>
           <span className={styles.headerStatus}>{isStreaming ? 'typing…' : 'online'}</span>
@@ -139,7 +140,7 @@ export function PersonaChat() {
       <div className={styles.messages} ref={scrollRef}>
         {messages.length === 0 ? (
           <div className={styles.empty}>
-            <PersonaAvatar avatar={avatar} className={styles.emptyAvatar} />
+            <PersonaAvatar avatar={avatar} className={styles.emptyAvatar} mood="happy" />
             <div className={styles.emptyName}>{name}</div>
             <div className={styles.emptyHint}>Say hi 👋</div>
           </div>
@@ -149,7 +150,7 @@ export function PersonaChat() {
             const isTyping = !isUser && !m.content && isStreaming;
             return (
               <div key={m.id} className={`${styles.row} ${isUser ? styles.rowUser : styles.rowThem}`}>
-                {!isUser && <PersonaAvatar avatar={avatar} className={styles.bubbleAvatar} />}
+                {!isUser && <PersonaAvatar avatar={avatar} className={styles.bubbleAvatar} still />}
                 <div className={`${styles.bubble} ${isUser ? styles.bubbleUser : styles.bubbleThem}`}>
                   {isTyping ? (
                     <span className={styles.dots}><span /><span /><span /></span>

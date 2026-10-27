@@ -75,10 +75,6 @@ function hashPairs(pairs: ExamplePair[], embedModel: string): string {
 // don't re-embed the whole bank twice on a single-slot server.
 let syncInFlight: { hash: string; promise: Promise<void> } | null = null;
 
-export function isBankReady(): boolean {
-  return bank.length > 0;
-}
-
 /**
  * Ensure the persona's example bank is embedded and loaded into memory. Cheap
  * no-op if already synced this session. Reuses stored embeddings across reloads

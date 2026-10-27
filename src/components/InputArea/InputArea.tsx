@@ -99,6 +99,13 @@ export function InputArea({ onSend, onStop, isStreaming }: Props) {
     reset();
   }, [value, images, notConnected, isStreaming, pendingDocIds, onSend, reset]);
 
+  // Stop turns the button back into a disabled Send, which would drop focus
+  // to <body>; park it in the message field instead.
+  const handleStop = useCallback(() => {
+    onStop();
+    ref.current?.focus();
+  }, [onStop]);
+
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     // On touch devices there's no easy Shift key, so Enter inserts a
     // newline like the on-screen keyboard implies; users tap Send instead.
@@ -199,7 +206,7 @@ export function InputArea({ onSend, onStop, isStreaming }: Props) {
           <SendButton
             isStreaming={isStreaming}
             disabled={isStreaming ? false : notConnected || (!value.trim() && images.length === 0)}
-            onClick={isStreaming ? onStop : handleSend}
+            onClick={isStreaming ? handleStop : handleSend}
           />
         </div>
       </div>

@@ -42,7 +42,11 @@ export function PersonaCall({ onClose }: Props) {
     <div className={styles.overlay} role="dialog" aria-modal="true" aria-label={`Call with ${name}`}>
       <div className={styles.top}>
         <div className={`${styles.avatarRing} ${callState === 'speaking' ? styles.speaking : ''}`}>
-          <PersonaAvatar avatar={avatar} className={styles.avatar} />
+          <PersonaAvatar
+            avatar={avatar}
+            className={styles.avatar}
+            mood={muted ? 'sleeping' : callState === 'speaking' ? 'talking' : callState === 'thinking' ? 'thinking' : 'idle'}
+          />
         </div>
         <div className={styles.name}>{name}</div>
         <div className={`${styles.status} ${error ? styles.statusError : ''}`}>{status}</div>

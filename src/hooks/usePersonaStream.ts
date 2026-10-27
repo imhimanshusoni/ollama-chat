@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback } from 'react';
 import { streamChatRaw, hasEmbedModel, DEFAULT_EMBED_MODEL } from '../services/ollama';
+import { isAbortError } from '../services/ollamaTools';
 import { syncExampleBank, retrieveExamples } from '../services/personaExamples';
 import { fetchAsanas, syncAsanaBank, retrieveAsanas, asanaKnowledgeBlock } from '../services/asanaKnowledge';
 import { updatePersonaMemory, isMeaningfulMemory } from '../services/personaMemory';
@@ -17,6 +18,22 @@ const MAX_HISTORY = 30; // recent persona turns sent each request
 const RETRIEVE_K = 8; // example exchanges retrieved per message
 const RETRIEVE_ASANA_K = 4; // asana knowledge-base entries retrieved per message
 const STATIC_FALLBACK = 16; // examples used when retrieval isn't available (no embed model)
+const SPICE_WARMUP = 3; // user turns before the first surprise is allowed
+const SPICE_GAP = 4; // minimum user turns between surprises
+
+// Turns since the last surprise, across sends in this session.
+let turnsSinceSpice = SPICE_GAP;
+
+// Roll for an unprompted surprise this turn. Randomness lives here, not in the
+// model, so it stays genuinely occasional.
+function spiceDirective(spice: { chance: number; moves: string[] } | undefined, userTurns: number): string {
+  turnsSinceSpice += 1;
+  if (!spice || userTurns < SPICE_WARMUP || turnsSinceSpice < SPICE_GAP) return '';
+  if (Math.random() >= spice.chance) return '';
+  turnsSinceSpice = 0;
+  const move = spice.moves[Math.floor(Math.random() * spice.moves.length)];
+  return `\n\nThis turn, spice things up: reply to what they said first, then ${move} Keep it to one or two short lines and stay in character.`;
+}
 
 // Background memory update shares one controller so a new send cancels an
 // in-flight one — on a single-slot Ollama it must not queue ahead of the reply.
@@ -40,7 +57,6 @@ function toWire(examples: OllamaMessage[]): OllamaMessage[] {
 export function usePersonaStream() {
   const [isStreaming, setIsStreaming] = useState(false);
   const controllerRef = useRef<AbortController | null>(null);
-  const accRef = useRef('');
 
   // Returns the cleaned reply text (also written to the store), or '' if nothing
   // was produced — the voice-call loop awaits this to know what to speak.
@@ -63,12 +79,11 @@ export function usePersonaStream() {
     store.addMessage({ id: generateId(), role: 'assistant', content: '' });
 
     // A new send cancels a pending background memory update.
-    memoryController?.abort();
-    memoryController = null;
+    cancelPersonaBackground();
 
     const controller = new AbortController();
     controllerRef.current = controller;
-    accRef.current = '';
+    let acc = '';
     setIsStreaming(true);
 
     // Few-shot examples: retrieve the most relevant from the embedded bank; fall
@@ -95,7 +110,7 @@ export function usePersonaStream() {
     // Empty when there's no embed model, the fetch fails, or nothing matches —
     // she then falls back to her general prompt knowledge, still safety-bounded.
     let asanaBlock = '';
-    if (hasEmbedModel(models)) {
+    if (persona.knowledgeBase === 'asanas' && hasEmbedModel(models)) {
       try {
         const entries = await fetchAsanas();
         if (entries.length > 0) {
@@ -119,6 +134,10 @@ export function usePersonaStream() {
         ? `\n\nThings you remember about them (from past chats):\n${memory}`
         : '') +
       asanaBlock +
+      spiceDirective(
+        persona.spice,
+        usePersonaStore.getState().messages.filter((m) => m.role === 'user').length
+      ) +
       (style.emoji ? '' : '\n\nThis person does not want any emojis. Do not use a single emoji.');
 
     // Exclude the empty assistant placeholder, keep the recent tail.
@@ -133,19 +152,19 @@ export function usePersonaStream() {
     let reply = '';
     try {
       for await (const chunk of streamChatRaw(baseUrl, currentModel, wire, [], false, controller.signal)) {
-        if (chunk.content) accRef.current += chunk.content;
+        if (chunk.content) acc += chunk.content;
       }
       // L3: deterministically clean the buffered reply — drop self-correction
       // meta-notes, collapse redrafts, enforce the emoji preference — before it
       // ever reaches the UI.
-      reply = cleanPersonaReply(accRef.current, style) || '…';
+      reply = cleanPersonaReply(acc, style) || '…';
       usePersonaStore.getState().updateLastMessage(reply);
       ok = true;
     } catch (err) {
-      if (err instanceof Error && err.name === 'AbortError') {
+      if (isAbortError(err)) {
         usePersonaStore.getState().removeLastIfEmptyAssistant();
       } else {
-        reply = accRef.current || '…';
+        reply = acc || '…';
         usePersonaStore.getState().updateLastMessage(reply);
         usePersonaStore.getState().setLastMessageError(err instanceof Error ? err.message : String(err));
       }
@@ -159,7 +178,7 @@ export function usePersonaStream() {
       memoryController = new AbortController();
       const sig = memoryController.signal;
       const recent = usePersonaStore.getState().messages.slice(-8);
-      void updatePersonaMemory(baseUrl, currentModel, usePersonaStore.getState().memory, recent, sig).then(
+      void updatePersonaMemory(baseUrl, currentModel, usePersonaStore.getState().memory, recent, persona.memoryFocus, sig).then(
         (updated) => {
           if (!sig.aborted && updated) usePersonaStore.getState().setMemory(updated);
         }

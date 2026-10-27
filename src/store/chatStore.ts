@@ -41,7 +41,6 @@ interface ChatState {
   truncateFrom: (id: string, messageId: string) => void;
   setThinkLevel: (id: string, level: ThinkLevel) => void;
   addDocToConversation: (id: string, docId: string) => void;
-  removeDocFromConversation: (id: string, docId: string) => void;
   // Called after a document is deleted from the global library — drop its id
   // from every conversation that referenced it.
   purgeDocFromAllConversations: (docId: string) => void;
@@ -66,6 +65,40 @@ function migrateOldData(): { conversations: Conversation[]; activeId: string | n
     // ignore migration errors
   }
   return null;
+}
+
+// Streaming calls set() once per token, and persist serializes every chat each
+// time. Write at most every PERSIST_THROTTLE_MS (trailing), and flush whenever
+// the page is hidden or closed so nothing is lost. A full localStorage
+// (QuotaExceededError) must not crash a state update — warn and keep going on
+// in-memory state.
+const PERSIST_THROTTLE_MS = 800;
+let pendingWrite: { key: string; value: string } | null = null;
+let writeTimer: ReturnType<typeof setTimeout> | null = null;
+
+function flushPendingWrite() {
+  if (writeTimer) clearTimeout(writeTimer);
+  writeTimer = null;
+  if (!pendingWrite) return;
+  const { key, value } = pendingWrite;
+  pendingWrite = null;
+  try {
+    localStorage.setItem(key, value);
+  } catch (err) {
+    console.warn('[chatStore] persist failed (storage quota?)', err);
+  }
+}
+
+function throttledSetItem(key: string, value: string) {
+  pendingWrite = { key, value };
+  if (!writeTimer) writeTimer = setTimeout(flushPendingWrite, PERSIST_THROTTLE_MS);
+}
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('pagehide', flushPendingWrite);
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') flushPendingWrite();
+  });
 }
 
 export const useChatStore = create<ChatState>()(
@@ -256,14 +289,6 @@ export const useChatStore = create<ChatState>()(
           }));
         },
 
-        removeDocFromConversation: (id, docId) => {
-          set((state) => ({
-            conversations: state.conversations.map((c) =>
-              c.id === id ? { ...c, docIds: (c.docIds ?? []).filter((d) => d !== docId) } : c
-            ),
-          }));
-        },
-
         purgeDocFromAllConversations: (docId) => {
           set((state) => ({
             conversations: state.conversations.map((c) =>
@@ -337,17 +362,9 @@ export const useChatStore = create<ChatState>()(
         }
         return state;
       },
-      // A full localStorage (QuotaExceededError) must not crash a state
-      // update — keep the app running on in-memory state and just warn.
       storage: createJSONStorage(() => ({
         getItem: (key) => localStorage.getItem(key),
-        setItem: (key, value) => {
-          try {
-            localStorage.setItem(key, value);
-          } catch (err) {
-            console.warn('[chatStore] persist failed (storage quota?)', err);
-          }
-        },
+        setItem: throttledSetItem,
         removeItem: (key) => localStorage.removeItem(key),
       })),
       // Strip base64 images before persisting to avoid blowing localStorage limit

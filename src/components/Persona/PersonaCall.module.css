@@ -69,7 +69,7 @@
   text-transform: lowercase;
   min-height: 1.2em;
 }
-.statusError { color: var(--danger, #e5484d); text-transform: none; }
+.statusError { color: var(--error); text-transform: none; }
 
 /* --- Middle: live captions --- */
 .captions {
@@ -130,7 +130,7 @@
 .endBtn {
   width: 4rem;
   height: 4rem;
-  background: var(--danger, #e5484d);
+  background: var(--error);
   color: #fff;
 }
 .endBtn:hover { filter: brightness(1.08); }

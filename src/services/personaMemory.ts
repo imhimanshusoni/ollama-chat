@@ -8,6 +8,9 @@ export function isMeaningfulMemory(m: string | undefined | null): boolean {
   return t.length > 0 && t !== '-' && !/^\(?\s*none/i.test(t);
 }
 
+const DEFAULT_FOCUS =
+  'their name, what is going on in their life, likes and dislikes, plans and goals, and running jokes';
+
 // Maintains a short, durable memory of the person the persona is texting with,
 // so the chat feels continuous across sessions (it remembers your name, life,
 // how you've been). Runs in the background after a reply via the non-streaming
@@ -17,6 +20,7 @@ export async function updatePersonaMemory(
   model: string,
   existingMemory: string,
   recentTurns: Message[],
+  focus: string | undefined,
   signal?: AbortSignal
 ): Promise<string> {
   const transcript = recentTurns
@@ -27,11 +31,9 @@ export async function updatePersonaMemory(
   const prior = isMeaningfulMemory(existingMemory) ? existingMemory : '';
 
   const prompt =
-    "You maintain a short private memory about the person a yoga & wellness coach is helping. " +
-    "From the conversation below, extract durable, health-relevant facts about THEM — name, their " +
-    "body/wellness problems (e.g. back pain, stress, poor sleep, PCOD), any injuries, pregnancy, or " +
-    "medical conditions, their goals, what asanas the coach already suggested, and what seemed to help " +
-    "or not — and merge them with what's already known. " +
+    "You maintain a short private memory about the person you are chatting with. " +
+    `From the conversation below, extract durable facts about THEM — ${focus || DEFAULT_FOCUS} — ` +
+    "and merge them with what's already known. " +
     "Output ONLY the updated memory as a few short plain factual lines (max ~8). " +
     "No preamble, no placeholders, no quotes. If there is genuinely nothing worth remembering, output a single dash '-'.\n\n" +
     (prior ? `Already known:\n${prior}\n\n` : '') +

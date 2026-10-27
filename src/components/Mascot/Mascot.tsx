@@ -3,22 +3,23 @@ import styles from './Mascot.module.css';
 
 interface Props {
   mood?: MascotMood;
-  size?: number; // rendered px
+  size?: number | string; // rendered px, or a CSS length such as '100%'
   label?: string; // accessible name; omit when the mascot is decorative
   className?: string;
+  still?: boolean; // no idle animation (small repeated uses, e.g. chat bubbles)
 }
 
 // Pip, the app's companion: a coral pebble with a spark antenna. Its mood is
 // the live state indicator wherever the app has state (connection, waiting
 // for the first token, streaming). Drawn at 64×64 and scaled.
-export function Mascot({ mood = 'idle', size = 32, label, className }: Props) {
+export function Mascot({ mood = 'idle', size = 32, label, className, still }: Props) {
   const a11y = label
     ? { role: 'img' as const, 'aria-label': label }
     : { 'aria-hidden': true as const };
 
   return (
     <svg
-      className={`${styles.mascot} ${styles[mood]}${className ? ` ${className}` : ''}`}
+      className={`${styles.mascot} ${styles[mood]}${still ? ` ${styles.still}` : ''}${className ? ` ${className}` : ''}`}
       width={size}
       height={size}
       viewBox="0 0 64 64"

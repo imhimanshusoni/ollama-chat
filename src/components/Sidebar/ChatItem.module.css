@@ -59,6 +59,19 @@
   pointer-events: auto;
 }
 
+/* No hover on touch screens: keep rename and delete reachable. */
+@media (hover: none) {
+  .actions {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .iconBtn {
+    min-width: 2.5rem;
+    min-height: 2.5rem;
+  }
+}
+
 .chatItem:hover { --row-bg: color-mix(in srgb, var(--text-1) 4.5%, var(--bg-sidebar)); }
 .active { --row-bg: color-mix(in srgb, var(--text-1) 7.5%, var(--bg-sidebar)); }
 

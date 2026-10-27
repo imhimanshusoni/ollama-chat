@@ -35,8 +35,9 @@
   height: 1.5rem;
   border-radius: var(--radius-full);
   border: none;
-  background: rgba(20, 20, 19, 0.62);
-  color: #faf9f5;
+  /* A dark scrim over the thumbnail, the same in both themes. */
+  background: color-mix(in srgb, var(--bg-code) 62%, transparent);
+  color: var(--text-code);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -44,7 +45,7 @@
   transition: background 0.15s;
 }
 
-.previewRemove:hover { background: rgba(20, 20, 19, 0.82); }
+.previewRemove:hover { background: color-mix(in srgb, var(--bg-code) 85%, transparent); }
 
 /* --- Composer: one rounded field, text on top, icon toolbar below --- */
 .wrap {

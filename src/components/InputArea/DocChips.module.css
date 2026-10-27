@@ -20,7 +20,7 @@
 }
 
 .chipError {
-  border-color: var(--danger, #e5484d);
+  border-color: var(--error);
 }
 
 .fileIcon { color: var(--text-3); flex-shrink: 0; }

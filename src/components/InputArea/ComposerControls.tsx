@@ -1,4 +1,4 @@
-import { useRef, useState, useCallback } from 'react';
+import { useRef, useState, useCallback, type KeyboardEvent } from 'react';
 import { useConnectionStore } from '../../store/connectionStore';
 import { useChatStore } from '../../store/chatStore';
 import { isEmbedModel, warmModel } from '../../services/ollama';
@@ -48,8 +48,17 @@ function LevelGlyph({ bars }: { bars: number }) {
 export function ComposerControls() {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
   const close = useCallback(() => setOpen(false), []);
   useClickOutside(rootRef, close);
+
+  // Escape closes the popover and hands focus back to its trigger.
+  const handleKeyDown = useCallback((e: KeyboardEvent) => {
+    if (e.key !== 'Escape' || !open) return;
+    e.stopPropagation();
+    setOpen(false);
+    triggerRef.current?.focus();
+  }, [open]);
 
   const baseUrl = useConnectionStore((s) => s.baseUrl);
   const allModels = useConnectionStore((s) => s.models);
@@ -71,7 +80,7 @@ export function ComposerControls() {
   }, [setCurrentModel, baseUrl]);
 
   return (
-    <div className={styles.root} ref={rootRef}>
+    <div className={styles.root} ref={rootRef} onKeyDown={handleKeyDown}>
       {open && (
         <div className={styles.popover} role="menu">
           {models.length === 0 ? (
@@ -127,6 +136,7 @@ export function ComposerControls() {
       )}
 
       <button
+        ref={triggerRef}
         type="button"
         className={styles.chip}
         onClick={() => setOpen((o) => !o)}

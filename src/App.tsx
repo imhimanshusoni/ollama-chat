@@ -21,7 +21,7 @@ export default function App() {
   const settingsOpen = useUiStore((s) => s.settingsOpen);
   const setSettingsOpen = useUiStore((s) => s.setSettingsOpen);
   const personaOpen = useUiStore((s) => s.personaOpen);
-  const conversations = useChatStore((s) => s.conversations);
+  const conversationCount = useChatStore((s) => s.conversations.length);
   const activeId = useChatStore((s) => s.activeId);
   const newChat = useChatStore((s) => s.newChat);
 
@@ -34,7 +34,7 @@ export default function App() {
     if (useChatStore.getState().conversations.length === 0) {
       newChat();
     }
-  }, [conversations.length, newChat]);
+  }, [conversationCount, newChat]);
 
   // Auto-sync the tunnel URL + reconnect on load; status flows
   // connecting → connected/error so failures are visible in the UI.

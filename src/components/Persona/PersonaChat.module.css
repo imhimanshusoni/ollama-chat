@@ -127,7 +127,7 @@
   display: block;
   margin-top: 4px;
   font-size: var(--font-xs);
-  color: var(--danger, #e5484d);
+  color: var(--error);
 }
 
 /* --- Typing dots --- */

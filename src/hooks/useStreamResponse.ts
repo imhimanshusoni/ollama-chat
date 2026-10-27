@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback } from 'react';
 import { buildContext, spanToSummarize } from '../services/contextWindow';
-import { streamChatWithTools } from '../services/ollamaTools';
+import { streamChatWithTools, isAbortError } from '../services/ollamaTools';
 import { buildSystemPrompt } from '../services/prompts';
 import { summarizeSpan } from '../services/summarizer';
 import { generateChatTitle } from '../services/titleGenerator';
@@ -68,7 +68,6 @@ function maybeSummarize(chatId: string, baseUrl: string, model: string, systemPr
 export function useStreamResponse() {
   const [isStreaming, setIsStreaming] = useState(false);
   const controllerRef = useRef<AbortController | null>(null);
-  const accumulatedRef = useRef('');
 
   // Core streaming path. Assumes the conversation ends with the user message
   // to answer: appends the assistant placeholder and streams into it. Shared
@@ -108,7 +107,7 @@ export function useStreamResponse() {
     // Prepare streaming
     const controller = new AbortController();
     controllerRef.current = controller;
-    accumulatedRef.current = '';
+    let accumulated = '';
     setIsStreaming(true);
 
     let completed = false;
@@ -151,7 +150,7 @@ export function useStreamResponse() {
         ...(doc.text ? { docContext: doc.text } : {}),
       })) {
         if (ev.type === 'reset') {
-          accumulatedRef.current = '';
+          accumulated = '';
           updateLastMessage(activeId, '');
         } else if (ev.type === 'thinking') {
           appendThinking(activeId, ev.value);
@@ -168,18 +167,18 @@ export function useStreamResponse() {
             atMessageCount: msgCount,
           });
         } else {
-          accumulatedRef.current += ev.value;
-          updateLastMessage(activeId, accumulatedRef.current);
+          accumulated += ev.value;
+          updateLastMessage(activeId, accumulated);
         }
       }
       completed = true;
     } catch (err: unknown) {
-      if (err instanceof Error && err.name === 'AbortError') {
+      if (isAbortError(err)) {
         // Aborted before any token arrived → drop the empty placeholder so it
         // isn't persisted (and later sent to the model as an empty turn).
         removeLastMessageIfEmptyAssistant(activeId);
       } else {
-        const fallback = accumulatedRef.current || '*Could not get a response.*';
+        const fallback = accumulated || '*Could not get a response.*';
         updateLastMessage(activeId, fallback);
         setLastMessageError(activeId, err instanceof Error ? err.message : String(err));
         // A network-level failure (not an HTTP error — the server answered

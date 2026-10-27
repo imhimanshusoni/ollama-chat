@@ -139,7 +139,7 @@ function ToolCalls({ calls }: { calls: ToolInvocation[] }) {
   );
 }
 
-function Reasoning({ text, open, streaming }: { text: string; open: boolean; streaming: boolean }) {
+function Reasoning({ text, streaming }: { text: string; streaming: boolean }) {
   const bodyRef = useRef<HTMLDivElement>(null);
   // Follow the newest tokens only while the user is at the bottom of the box.
   // Scrolling up inside it disengages; scrolling back down re-engages. Content
@@ -168,7 +168,7 @@ function Reasoning({ text, open, streaming }: { text: string; open: boolean; str
   }, [text, streaming, pin]);
 
   return (
-    <details className={styles.reasoning} open={open} onToggle={handleToggle}>
+    <details className={styles.reasoning} open={streaming} onToggle={handleToggle}>
       <summary className={styles.reasoningSummary}>
         <svg
           className={styles.reasoningChevron}
@@ -252,7 +252,6 @@ function MessageInner({ message, isStreaming, actionsDisabled, onRegenerate, onE
         {!isUser && message.thinking && (
           <Reasoning
             text={message.thinking}
-            open={Boolean(isStreaming) && !message.content}
             streaming={Boolean(isStreaming) && !message.content}
           />
         )}

@@ -27,12 +27,6 @@
   color: var(--success);
 }
 
-.hint {
-  margin: 0;
-  font-size: var(--font-sm);
-  color: var(--text-3);
-  line-height: 1.5;
-}
 
 .notice {
   margin: 0;
@@ -96,7 +90,7 @@
 
 .itemError {
   font-size: var(--font-xs);
-  color: var(--danger, #e5484d);
+  color: var(--error);
 }
 
 .removeBtn {
@@ -114,4 +108,4 @@
   transition: color 0.12s, background 0.12s;
 }
 
-.removeBtn:hover { color: var(--danger, #e5484d); background: var(--bg-hover); }
+.removeBtn:hover { color: var(--error); background: var(--bg-hover); }

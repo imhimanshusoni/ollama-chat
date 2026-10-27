@@ -35,7 +35,14 @@ export const usePersonaStore = create<PersonaState>()(
 
       load: async () => {
         const persona = await fetchPersona();
-        if (persona) set({ persona });
+        if (!persona) return;
+        // A different character must not inherit the previous one's chat or
+        // what it remembered about the user.
+        set((state) =>
+          state.persona && state.persona.name !== persona.name
+            ? { persona, messages: [], memory: '', style: DEFAULT_STYLE }
+            : { persona }
+        );
       },
 
       addMessage: (msg) => set((state) => ({ messages: [...state.messages, msg] })),

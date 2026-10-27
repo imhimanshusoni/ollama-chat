@@ -127,26 +127,6 @@
   word-break: break-word;
 }
 
-/* --- Code blocks (pre) --- */
-.msg-body pre {
-  background: var(--bg-code);
-  padding: var(--space-4);
-  overflow-x: auto;
-  margin: 1rem 0;
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--border);
-}
-
-.msg-body pre code {
-  background: none;
-  padding: 0;
-  font-family: var(--font-mono);
-  font-size: 0.8125rem;
-  line-height: 1.6;
-  color: var(--text-code);
-  border-radius: 0;
-}
-
 /* --- Blockquote --- */
 .msg-body blockquote {
   border-left: 2px solid var(--border);

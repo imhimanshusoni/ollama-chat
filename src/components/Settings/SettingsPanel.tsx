@@ -33,6 +33,45 @@ export function SettingsPanel() {
     if (!inputFocusedRef.current) setUrlValue(baseUrl);
   }, [baseUrl]);
 
+  // Modal sheet focus: move focus in on open, keep Tab inside, close on
+  // Escape, and hand focus back to whatever opened it.
+  const panelRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const panel = panelRef.current;
+    if (!settingsOpen || !panel) return;
+    const opener = document.activeElement as HTMLElement | null;
+    panel.querySelector<HTMLElement>('button')?.focus();
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setSettingsOpen(false);
+        return;
+      }
+      if (e.key !== 'Tab') return;
+      const items = panel.querySelectorAll<HTMLElement>(
+        'button:not(:disabled), input:not(:disabled), [tabindex]:not([tabindex="-1"])'
+      );
+      if (items.length === 0) return;
+      const first = items[0];
+      const last = items[items.length - 1];
+      if (!panel.contains(document.activeElement)) {
+        e.preventDefault();
+        first.focus();
+      } else if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.removeEventListener('keydown', onKeyDown);
+      if (opener?.isConnected) opener.focus();
+    };
+  }, [settingsOpen, setSettingsOpen]);
+
   const handleConnect = async () => {
     const url = normalizeUrl(urlValue);
     if (!url) return;
@@ -60,7 +99,9 @@ export function SettingsPanel() {
   return (
     <div
       className={`${styles.panel} ${settingsOpen ? styles.panelOpen : ''}`}
+      ref={panelRef}
       role="dialog"
+      aria-modal="true"
       aria-label="Settings"
       inert={!settingsOpen}
     >
