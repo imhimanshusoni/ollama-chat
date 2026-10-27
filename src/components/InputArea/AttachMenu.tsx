@@ -55,38 +55,42 @@ export function AttachMenu({ pendingDocIds, onAddDoc, onImageFiles, imagesRemain
     <div className={styles.root} ref={rootRef}>
       {open && (
         <div className={styles.popover} role="menu">
+          <div className={styles.tiles}>
           <button
             type="button"
+            role="menuitem"
             className={styles.menuItem}
             disabled={notConnected || imagesRemaining <= 0}
             onClick={() => imageInputRef.current?.click()}
+            aria-label={imagesRemaining <= 0 ? 'Photos (limit reached)' : 'Photos'}
+            title={imagesRemaining <= 0 ? 'Photo limit reached' : 'Photos'}
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
               <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
               <circle cx="8.5" cy="8.5" r="1.5" />
               <polyline points="21 15 16 10 5 21" />
             </svg>
-            <span className={styles.menuLabel}>Photos</span>
-            {imagesRemaining <= 0 && <span className={styles.menuHint}>max reached</span>}
           </button>
 
           <button
             type="button"
+            role="menuitem"
             className={styles.menuItem}
             disabled={notConnected}
             onClick={() => docInputRef.current?.click()}
+            aria-label="Document (PDF, text, markdown)"
+            title="Document · PDF, text, markdown"
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
               <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
               <polyline points="14 2 14 8 20 8" />
             </svg>
-            <span className={styles.menuLabel}>Document</span>
-            <span className={styles.menuHint}>PDF, text, markdown</span>
           </button>
+          </div>
 
           {!embedReady && (
             <p className={styles.notice}>
-              Small files work as-is. Large files need an embedding model:
+              Large documents need an embedding model:
               <code className={styles.code}>ollama pull {DEFAULT_EMBED_MODEL}</code>
             </p>
           )}

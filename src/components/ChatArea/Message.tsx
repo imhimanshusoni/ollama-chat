@@ -5,6 +5,7 @@ import { MarkdownRenderer } from '../Markdown/MarkdownRenderer';
 import { escapeHtml } from '../../utils/escapeHtml';
 import { base64ImageDataUrl } from '../../utils/imageUtils';
 import { useDocStore } from '../../store/docStore';
+import { Mascot } from '../Mascot/Mascot';
 import styles from './Message.module.css';
 
 interface Props {
@@ -59,10 +60,10 @@ function ThinkingIndicator() {
   }, []);
 
   return (
-    <span className={styles.thinking}>
-      <span className={styles.thinkingDot} />
-      <span className={styles.thinkingText}>
-        Thinking{elapsed > 0 ? `... ${elapsed}s` : '...'}
+    <span className={styles.thinking} role="status" aria-label="Thinking">
+      <Mascot mood="thinking" size={34} />
+      <span className={styles.thinkingText} aria-hidden="true">
+        {elapsed > 0 ? `${elapsed}s` : ''}
       </span>
     </span>
   );
@@ -117,7 +118,7 @@ function ToolCalls({ calls }: { calls: ToolInvocation[] }) {
               </svg>
               <span className={styles.toolName}>{call.name}</span>
               {argSummary && <span className={styles.toolArgSummary}>{argSummary}</span>}
-              {running && <span className={styles.toolRunning}>running…</span>}
+              {running && <span className={styles.toolRunning} role="status" aria-label="Running" />}
             </summary>
             <div className={styles.toolDetail}>
               {argSummary && (
@@ -176,7 +177,17 @@ function Reasoning({ text, open, streaming }: { text: string; open: boolean; str
         >
           <polyline points="9 18 15 12 9 6" />
         </svg>
-        <span className={streaming ? styles.reasoningLive : undefined}>Reasoning</span>
+        <svg
+          className={`${styles.reasoningIcon} ${streaming ? styles.reasoningLive : ''}`}
+          width="15" height="15" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"
+          aria-hidden="true"
+        >
+          <path d="M9 18h6" />
+          <path d="M10 21h4" />
+          <path d="M12 3a6 6 0 0 0-3.6 10.8c.6.5 1 1.2 1.1 2V16h5v-.2c.1-.8.5-1.5 1.1-2A6 6 0 0 0 12 3Z" />
+        </svg>
+        <span className="visually-hidden">Reasoning</span>
       </summary>
       <div className={styles.reasoningText} ref={bodyRef} onScroll={handleBodyScroll}>
         <MarkdownRenderer content={text} variant="reasoning" />
@@ -224,10 +235,7 @@ function MessageInner({ message, isStreaming, actionsDisabled, onRegenerate, onE
 
   return (
     <div className={`${styles.msg} ${isUser ? styles.user : styles.assistant}`}>
-      <div className={`${styles.avatar} ${isUser ? styles.avatarUser : styles.avatarAssistant}`}>
-        {isUser ? 'U' : 'AI'}
-      </div>
-      <div className={`${styles.body} msg-body ${isStreaming && message.content ? 'cursor-blink' : ''}`}>
+      <div className={`${styles.body} msg-body${isUser ? '' : ' prose'}`}>
         {message.images && message.images.length > 0 && (
           <div className={styles.msgImages}>
             {message.images.map((img, i) => (
@@ -268,15 +276,23 @@ function MessageInner({ message, isStreaming, actionsDisabled, onRegenerate, onE
                   className={styles.editActionBtn}
                   onClick={() => setEditing(false)}
                   type="button"
+                  aria-label="Cancel edit"
+                  title="Cancel"
                 >
-                  Cancel
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                    <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+                  </svg>
                 </button>
                 <button
                   className={`${styles.editActionBtn} ${styles.editActionPrimary}`}
                   onClick={saveEdit}
                   type="button"
+                  aria-label="Save and resend"
+                  title="Save & resend"
                 >
-                  Save & resend
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="12" y1="19" x2="12" y2="5" /><polyline points="5 12 12 5 19 12" />
+                  </svg>
                 </button>
               </div>
             </div>
@@ -289,10 +305,22 @@ function MessageInner({ message, isStreaming, actionsDisabled, onRegenerate, onE
           <MarkdownRenderer content={message.content} />
         )}
         {!isUser && message.error && !isStreaming && (
-          <div className={styles.msgError}>Request failed: {message.error}</div>
+          <div className={styles.msgError} role="alert">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="9" /><line x1="12" y1="8" x2="12" y2="12.5" /><line x1="12" y1="16" x2="12.01" y2="16" />
+            </svg>
+            <span>{message.error}</span>
+          </div>
         )}
-        {showCopy && <CopyButton content={message.content} />}
-        {showRegenerate && <RegenerateButton onClick={onRegenerate} />}
+        {!isUser && isStreaming && message.content && (
+          <Mascot mood="talking" size={26} className={styles.streamMascot} />
+        )}
+        {(showCopy || showRegenerate) && (
+          <div className={styles.actions}>
+            {showCopy && <CopyButton content={message.content} />}
+            {showRegenerate && <RegenerateButton onClick={onRegenerate} />}
+          </div>
+        )}
         {isUser && !editing && !actionsDisabled && onEdit && (
           <button
             className={styles.editBtn}

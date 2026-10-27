@@ -175,16 +175,11 @@ export function InputArea({ onSend, onStop, isStreaming }: Props) {
         </div>
       )}
       <div className={`${styles.wrap} ${dragOver ? styles.dragOver : ''}`}>
-        <AttachMenu
-          pendingDocIds={pendingDocIds}
-          onAddDoc={addPending}
-          onImageFiles={attachImages}
-          imagesRemaining={MAX_IMAGES - images.length}
-        />
         <textarea
           ref={ref}
           className={styles.input}
-          placeholder={images.length ? 'Add a message or just send the image...' : 'Message Ollama...'}
+          placeholder="Message…"
+          aria-label="Message"
           rows={1}
           value={value}
           onChange={(e) => { setValue(e.target.value); resize(); }}
@@ -193,16 +188,19 @@ export function InputArea({ onSend, onStop, isStreaming }: Props) {
           disabled={notConnected}
           enterKeyHint={touch ? 'enter' : 'send'}
         />
-        <SendButton
-          isStreaming={isStreaming}
-          disabled={isStreaming ? false : notConnected || (!value.trim() && images.length === 0)}
-          onClick={isStreaming ? onStop : handleSend}
-        />
-      </div>
-      <div className={styles.footerRow}>
-        <ComposerControls />
-        <div className={styles.hint}>
-          {touch ? 'Tap send to send · Enter for new line' : 'Enter to send · Shift+Enter for new line'}
+        <div className={styles.toolbar}>
+          <AttachMenu
+            pendingDocIds={pendingDocIds}
+            onAddDoc={addPending}
+            onImageFiles={attachImages}
+            imagesRemaining={MAX_IMAGES - images.length}
+          />
+          <ComposerControls />
+          <SendButton
+            isStreaming={isStreaming}
+            disabled={isStreaming ? false : notConnected || (!value.trim() && images.length === 0)}
+            onClick={isStreaming ? onStop : handleSend}
+          />
         </div>
       </div>
     </div>

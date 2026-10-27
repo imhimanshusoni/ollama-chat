@@ -61,6 +61,7 @@ export function ChatItem({ id, title, isActive, onSelect, onDelete, onRename }: 
       data-chat-id={id}
     >
       <span className={styles.title}>{title}</span>
+      <span className={styles.actions}>
       <span
         className={styles.iconBtn}
         role="button"
@@ -118,6 +119,7 @@ export function ChatItem({ id, title, isActive, onSelect, onDelete, onRename }: 
           <line x1="18" y1="6" x2="6" y2="18" />
           <line x1="6" y1="6" x2="18" y2="18" />
         </svg>
+      </span>
       </span>
     </button>
   );

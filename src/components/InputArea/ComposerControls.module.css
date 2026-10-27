@@ -3,29 +3,36 @@
   flex-shrink: 0;
 }
 
-/* --- Chip --- */
+/* --- Chip: model name + thinking glyph --- */
 .chip {
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
-  padding: var(--space-1) var(--space-2) var(--space-1) var(--space-3);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-full);
+  height: 2.25rem;
+  padding: 0 var(--space-2) 0 var(--space-3);
+  border: none;
+  border-radius: var(--radius-md);
   background: transparent;
   color: var(--text-2);
   font-family: var(--font-sans);
-  font-size: var(--font-xs);
+  font-size: var(--font-sm);
   cursor: pointer;
-  transition: background 0.15s var(--ease), border-color 0.15s var(--ease), color 0.15s var(--ease);
+  transition: background 0.15s var(--ease), color 0.15s var(--ease);
 }
 
-.chip:hover { background: var(--bg-hover); color: var(--text-1); border-color: var(--border-focus); }
-.chip:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.chip:hover { background: var(--bg-hover); color: var(--text-1); }
 
-.chipModel { font-weight: 600; color: var(--text-1); }
-.chipSep { color: var(--text-3); }
-.chipMode { color: var(--text-3); }
-.chipModeOn { color: var(--accent); font-weight: 500; }
+.chipModel {
+  font-weight: 500;
+  color: var(--text-1);
+  max-width: 9rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chipMode { display: inline-flex; color: var(--text-3); }
+.chipModeOn { display: inline-flex; color: var(--accent); }
 
 .chevron {
   color: var(--text-3);
@@ -39,13 +46,13 @@
   bottom: calc(100% + var(--space-2));
   left: 0;
   z-index: 20;
-  width: 17rem;
+  width: 16rem;
   max-width: 80vw;
   padding: var(--space-2);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   background: var(--bg-settings);
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.28), 0 2px 8px rgba(0, 0, 0, 0.16);
+  box-shadow: var(--shadow-pop);
   animation: popIn 0.16s var(--ease);
 }
 
@@ -54,14 +61,6 @@
   to { opacity: 1; transform: translateY(0); }
 }
 
-.sectionLabel {
-  padding: var(--space-1) var(--space-2);
-  font-size: var(--font-xs);
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--text-3);
-}
 
 .empty {
   margin: 0;
@@ -114,68 +113,39 @@
   background: var(--border);
 }
 
-.reasoningRow {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-3);
-  padding: var(--space-2);
-}
 
-.reasoningText {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-}
 
-.reasoningTitle {
-  font-size: var(--font-sm);
-  font-weight: 500;
-  color: var(--text-1);
-}
 
-.reasoningHint {
-  font-size: var(--font-xs);
-  color: var(--text-3);
-}
 
-/* --- Thinking level (segmented control) --- */
-.thinkRow {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  padding: var(--space-2);
-}
-
+/* --- Thinking level (segmented control of glyphs) --- */
 .segments {
   display: flex;
   gap: 2px;
-  padding: 2px;
+  margin: var(--space-1);
+  padding: 3px;
   border-radius: var(--radius-md);
-  background: var(--bg-input);
+  background: var(--bg-active);
 }
 
 .segment {
   flex: 1;
-  padding: var(--space-1) 0;
+  display: grid;
+  place-items: center;
+  height: 2rem;
   border: none;
   border-radius: var(--radius-sm);
   background: transparent;
   color: var(--text-2);
-  font-family: var(--font-sans);
-  font-size: var(--font-xs);
-  font-weight: 500;
   cursor: pointer;
   transition: background 0.12s var(--ease), color 0.12s var(--ease);
 }
 
 .segment:hover { color: var(--text-1); }
-.segment:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 
 .segmentActive {
-  background: var(--accent);
-  color: var(--text-inverse);
+  background: var(--bg-settings);
+  color: var(--accent);
+  box-shadow: 0 1px 2px rgba(20, 20, 19, 0.12);
 }
 
-.segmentActive:hover { color: var(--text-inverse); }
+.segmentActive:hover { color: var(--accent); }

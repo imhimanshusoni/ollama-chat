@@ -28,11 +28,12 @@ export function Sidebar() {
 
   const handleSelect = useCallback((id: string) => {
     switchChat(id);
+    setPersonaOpen(false);
     // Close sidebar on mobile after selecting a chat
     if (window.innerWidth <= 768) {
       setSidebarOpen(false);
     }
-  }, [switchChat, setSidebarOpen]);
+  }, [switchChat, setSidebarOpen, setPersonaOpen]);
 
   // Delete a chat and immediately free any documents it owned (they aren't
   // shared, so a deleted chat's docs are pure orphans). Capture the ids before
@@ -61,9 +62,10 @@ export function Sidebar() {
           type="button"
           className={`${styles.personaEntry} ${personaOpen ? styles.personaEntryActive : ''}`}
           onClick={openPersona}
+          title={`Chat with ${persona?.name ?? 'persona'}`}
         >
           <PersonaAvatar avatar={persona?.avatar ?? '🙂'} className={styles.personaAvatar} />
-          <span className={styles.personaLabel}>Chat with {persona?.name ?? 'someone'}</span>
+          <span className={styles.personaLabel}>{persona?.name ?? 'Persona'}</span>
         </button>
 
         <div className={styles.sidebarChats}>

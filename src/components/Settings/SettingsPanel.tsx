@@ -3,6 +3,9 @@ import { useConnectionStore } from '../../store/connectionStore';
 import { useUiStore } from '../../store/uiStore';
 import { connect, normalizeUrl, syncAndConnect } from '../../services/connection';
 import { IconButton } from '../ui/IconButton';
+import { Mascot } from '../Mascot/Mascot';
+import { connectionLabel, connectionMood } from '../Mascot/mood';
+import { isEmbedModel } from '../../services/ollama';
 import { DocumentsSettings } from './DocumentsSettings';
 import styles from './SettingsPanel.module.css';
 
@@ -13,11 +16,12 @@ export function SettingsPanel() {
     baseUrl,
     models,
     status,
+    currentModel,
     isManualOverride,
     clearManualOverride,
   } = useConnectionStore();
   const [urlValue, setUrlValue] = useState(baseUrl);
-  const [connectText, setConnectText] = useState('Connect');
+  const [busy, setBusy] = useState(false);
   const [syncing, setSyncing] = useState(false);
   // Track focus in a ref so this only fires when baseUrl actually changes (e.g.
   // a background auto-sync). Keying the effect on a focus *state* would also run
@@ -33,28 +37,42 @@ export function SettingsPanel() {
     const url = normalizeUrl(urlValue);
     if (!url) return;
     setUrlValue(url);
-    setConnectText('Connecting...');
-    const ok = await connect(url, { manual: true });
-    setConnectText(ok ? 'Reconnect' : 'Retry');
+    setBusy(true);
+    try {
+      await connect(url, { manual: true });
+    } finally {
+      setBusy(false);
+    }
   };
 
   const handleSyncFromGithub = async () => {
     setSyncing(true);
     try {
       clearManualOverride();
-      const ok = await syncAndConnect();
-      setConnectText(ok ? 'Reconnect' : 'Retry');
+      await syncAndConnect();
     } finally {
       setSyncing(false);
     }
   };
 
+  const modelCount = models.filter((m) => !isEmbedModel(m)).length;
+
   return (
-    <div className={`${styles.panel} ${settingsOpen ? styles.panelOpen : ''}`}>
+    <div
+      className={`${styles.panel} ${settingsOpen ? styles.panelOpen : ''}`}
+      role="dialog"
+      aria-label="Settings"
+      inert={!settingsOpen}
+    >
       <div className={styles.header}>
-        <span className={styles.title}>Settings</span>
+        <svg className={styles.headerIcon} width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <line x1="4" y1="6" x2="20" y2="6" /><circle cx="9" cy="6" r="2.2" fill="var(--bg-sidebar)" />
+          <line x1="4" y1="12" x2="20" y2="12" /><circle cx="15" cy="12" r="2.2" fill="var(--bg-sidebar)" />
+          <line x1="4" y1="18" x2="20" y2="18" /><circle cx="8" cy="18" r="2.2" fill="var(--bg-sidebar)" />
+        </svg>
         <IconButton
           label="Close settings"
+          title="Close"
           onClick={() => setSettingsOpen(false)}
         >
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
@@ -64,51 +82,79 @@ export function SettingsPanel() {
         </IconButton>
       </div>
       <div className={styles.body}>
-        <div className={styles.fieldGroup}>
-          <label className={styles.fieldLabel} htmlFor="settings-url">Ollama URL</label>
-          <input
-            type="text"
-            className={styles.fieldInput}
-            id="settings-url"
-            value={urlValue}
-            onChange={(e) => setUrlValue(e.target.value)}
-            onFocus={() => { inputFocusedRef.current = true; }}
-            onBlur={() => { inputFocusedRef.current = false; }}
-            placeholder="https://your-url.trycloudflare.com"
-            spellCheck={false}
-            autoComplete="off"
-          />
-          <p className={styles.fieldHint}>
+        <section className={styles.server} aria-label="Model server">
+          <div className={styles.statusCard}>
+            <Mascot mood={connectionMood(status)} size={52} label={connectionLabel(status, currentModel)} />
+            <div className={styles.statusSide}>
             {isManualOverride ? (
-              <>
-                Manually set, not auto-synced.{' '}
-                <button className={styles.linkBtn} onClick={handleSyncFromGithub} type="button" disabled={syncing}>
-                  {syncing ? 'Syncing…' : 'Sync from GitHub'}
-                </button>
-              </>
+              <button
+                className={styles.syncBtn}
+                onClick={() => void handleSyncFromGithub()}
+                type="button"
+                disabled={syncing}
+                aria-label="Manual URL. Sync from GitHub instead"
+                title="Manual URL · sync from GitHub"
+              >
+                <svg className={syncing ? styles.spinning : undefined} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M21 12a9 9 0 1 1-2.64-6.36" />
+                  <polyline points="21 3 21 9 15 9" />
+                </svg>
+              </button>
             ) : (
-              'Auto-synced from GitHub'
+              <span className={styles.synced} title="Auto-synced from GitHub" role="img" aria-label="Auto-synced from GitHub">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M17.5 19a4.5 4.5 0 0 0 .5-8.97A6 6 0 0 0 6.34 9.5 4 4 0 0 0 6.5 17.5" />
+                  <polyline points="9 15 11.5 17.5 16 13" />
+                </svg>
+              </span>
             )}
-          </p>
-        </div>
-        <button className={styles.btnConnect} onClick={handleConnect} type="button">
-          {connectText}
-        </button>
-        {status !== 'idle' && (
-          <div className={styles.statusRow}>
-            <div className={`${styles.statusDot} ${status === 'connected' ? styles.statusConnected : status === 'error' ? styles.statusError : ''}`} />
-            <span>
-              {status === 'connected' ? `Connected — ${models.length} model${models.length !== 1 ? 's' : ''}` :
-               status === 'error' ? 'Connection failed' :
-               status === 'connecting' ? 'Connecting...' : ''}
-            </span>
+            {status === 'connected' && currentModel && (
+              <span className={styles.count} title={`${modelCount} chat model${modelCount !== 1 ? 's' : ''} available`}>
+                {currentModel}
+              </span>
+            )}
+            </div>
           </div>
-        )}
-        {status === 'connected' && (
-          <p className={styles.fieldHint}>
-            Pick your model and thinking level from the controls next to the message box.
-          </p>
-        )}
+
+          <div className={styles.urlField}>
+            <svg className={styles.urlIcon} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+              <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+            </svg>
+            <input
+              type="url"
+              className={styles.fieldInput}
+              id="settings-url"
+              aria-label="Ollama server URL"
+              value={urlValue}
+              onChange={(e) => setUrlValue(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') void handleConnect(); }}
+              onFocus={() => { inputFocusedRef.current = true; }}
+              onBlur={() => { inputFocusedRef.current = false; }}
+              placeholder="https://…trycloudflare.com"
+              spellCheck={false}
+              autoComplete="off"
+            />
+            <button
+              className={styles.btnConnect}
+              onClick={() => void handleConnect()}
+              type="button"
+              disabled={busy}
+              aria-label={status === 'connected' ? 'Reconnect' : 'Connect'}
+              title={status === 'connected' ? 'Reconnect' : 'Connect'}
+            >
+              {busy ? (
+                <span className={styles.spinner} aria-hidden="true" />
+              ) : (
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="5" y1="12" x2="19" y2="12" />
+                  <polyline points="12 5 19 12 12 19" />
+                </svg>
+              )}
+            </button>
+          </div>
+
+        </section>
         <DocumentsSettings />
       </div>
     </div>

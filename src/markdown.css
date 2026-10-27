@@ -13,6 +13,30 @@
 }
 
 /* --- Paragraphs --- */
+/* Assistant replies read like a page: text serif, a size up. */
+.msg-body.prose {
+  font-family: var(--font-serif);
+  font-size: var(--font-prose);
+  font-optical-sizing: auto;
+  line-height: 1.7;
+  letter-spacing: -0.003em;
+}
+
+.msg-body.prose :is(h1, h2, h3) {
+  font-weight: 500;
+  letter-spacing: -0.015em;
+  line-height: 1.25;
+  margin: 2rem 0 0.5rem;
+}
+
+.msg-body.prose h1 { font-size: 1.625rem; }
+.msg-body.prose h2 { font-size: 1.375rem; }
+.msg-body.prose h3 { font-size: 1.1875rem; }
+
+.msg-body.prose :is(table, .table-wrap) {
+  font-family: var(--font-sans);
+}
+
 .msg-body p {
   margin-bottom: 0.75rem;
 }
@@ -83,10 +107,10 @@
 }
 
 .msg-body a {
-  color: var(--accent);
+  color: var(--accent-ink);
   text-decoration: underline;
   text-underline-offset: 3px;
-  text-decoration-color: var(--accent-subtle);
+  text-decoration-color: color-mix(in srgb, var(--accent) 45%, transparent);
   transition: text-decoration-color 0.15s;
 }
 .msg-body a:hover {
@@ -105,12 +129,12 @@
 
 /* --- Code blocks (pre) --- */
 .msg-body pre {
-  background: #0D0D0D;
+  background: var(--bg-code);
   padding: var(--space-4);
   overflow-x: auto;
   margin: 1rem 0;
   border-radius: var(--radius-lg);
-  border: 1px solid #2A2A2A;
+  border: 1px solid var(--border);
 }
 
 .msg-body pre code {
@@ -119,13 +143,13 @@
   font-family: var(--font-mono);
   font-size: 0.8125rem;
   line-height: 1.6;
-  color: #E0E0E0;
+  color: var(--text-code);
   border-radius: 0;
 }
 
 /* --- Blockquote --- */
 .msg-body blockquote {
-  border-left: 3px solid var(--accent);
+  border-left: 2px solid var(--border);
   padding-left: var(--space-4);
   margin: 1rem 0;
   color: var(--text-2);
@@ -179,26 +203,4 @@
 
 .msg-body tr:hover td {
   background: var(--bg-hover);
-}
-
-/* ============================
-   STREAMING CURSOR
-   ============================ */
-/* Attach the caret to the end of the last rendered block (usually the
-   paragraph being written) so it trails the text inline, rather than to the
-   container, which would drop it onto its own line below. */
-.cursor-blink > *:last-child::after {
-  content: '';
-  display: inline-block;
-  width: 2px;
-  height: 1em;
-  background: var(--accent);
-  margin-left: 2px;
-  vertical-align: text-bottom;
-  animation: blink 0.8s step-end infinite;
-  border-radius: 1px;
-}
-
-@keyframes blink {
-  50% { opacity: 0; }
 }

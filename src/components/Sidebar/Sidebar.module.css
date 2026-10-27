@@ -10,53 +10,37 @@
 }
 
 .sidebarHeader {
-  padding: var(--space-4);
+  padding: var(--space-4) var(--space-3) var(--space-3) var(--space-4);
   display: flex;
-  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
   gap: var(--space-3);
 }
 
-.sidebarBrand {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  font-size: var(--font-sm);
-  font-weight: 600;
-  color: var(--text-2);
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  padding: var(--space-1) 0;
+.brandMascot {
+  margin-top: -2px;
 }
 
 .btnNewChat {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-2);
-  width: 100%;
-  padding: var(--space-3) var(--space-4);
+  display: grid;
+  place-items: center;
+  width: 2.5rem;
+  height: 2.5rem;
   border-radius: var(--radius-md);
   border: 1px solid var(--border);
-  background: transparent;
+  background: var(--bg-input);
   color: var(--text-1);
-  font-size: var(--font-sm);
-  font-weight: 500;
   cursor: pointer;
-  transition: all 0.15s var(--ease);
-  min-height: 2.75rem;
+  transition: background 0.15s var(--ease), border-color 0.15s var(--ease), transform 0.1s var(--ease);
 }
 
 .btnNewChat:hover {
-  background: var(--bg-hover);
+  border-color: var(--accent);
+  color: var(--accent-ink);
 }
 
 .btnNewChat:active {
-  background: var(--bg-active);
-}
-
-.btnNewChat:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
+  transform: scale(0.94);
 }
 
 /* ---- Persona space entry ---- */
@@ -81,6 +65,8 @@
 .personaEntry:hover { background: var(--bg-hover); }
 .personaEntryActive { background: var(--bg-active); }
 
+.personaEntry:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+
 .personaAvatar {
   display: flex;
   align-items: center;
@@ -88,9 +74,10 @@
   width: 1.75rem;
   height: 1.75rem;
   border-radius: var(--radius-full);
-  background: var(--bg-hover);
+  background: var(--bg-active);
   font-size: 1rem;
   flex-shrink: 0;
+  box-shadow: 0 0 0 2px var(--bg-sidebar), 0 0 0 3.5px var(--accent);
 }
 
 .personaLabel {
@@ -102,7 +89,9 @@
 .sidebarChats {
   flex: 1;
   overflow-y: auto;
-  padding: 0 var(--space-2);
+  padding: var(--space-2) var(--space-2) 0;
+  border-top: 1px solid var(--border);
+  margin: 0 var(--space-2);
 }
 
 .sidebarChats::-webkit-scrollbar {

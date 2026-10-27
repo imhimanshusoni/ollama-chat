@@ -1,4 +1,5 @@
 .chatItem {
+  position: relative;
   display: flex;
   align-items: center;
   gap: var(--space-2);
@@ -38,8 +39,30 @@
   min-width: 0;
 }
 
-.iconBtn {
+.actions {
+  position: absolute;
+  top: 50%;
+  right: var(--space-1);
+  display: flex;
+  gap: 2px;
+  padding-left: var(--space-6);
+  transform: translateY(-50%);
+  background: linear-gradient(to right, transparent, var(--row-bg, var(--bg-sidebar)) var(--space-5));
   opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s var(--ease);
+}
+
+.chatItem:hover .actions,
+.actions:focus-within {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.chatItem:hover { --row-bg: color-mix(in srgb, var(--text-1) 4.5%, var(--bg-sidebar)); }
+.active { --row-bg: color-mix(in srgb, var(--text-1) 7.5%, var(--bg-sidebar)); }
+
+.iconBtn {
   padding: var(--space-1);
   border: none;
   background: none;
@@ -50,14 +73,9 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  transition: opacity 0.15s, color 0.15s;
-  min-width: 1.5rem;
-  min-height: 1.5rem;
-}
-
-.chatItem:hover .iconBtn,
-.iconBtn:focus-visible {
-  opacity: 1;
+  transition: color 0.15s;
+  min-width: 1.75rem;
+  min-height: 1.75rem;
 }
 
 .iconBtn:hover {

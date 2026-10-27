@@ -1,9 +1,12 @@
 /* ============================
-   TOKENS
+   TOKENS — see DESIGN.md
+   Cream canvas + warm ink + one coral voltage.
    ============================ */
 :root {
-  --font-sans: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', system-ui, sans-serif;
-  --font-mono: 'SF Mono', 'Fira Code', 'Consolas', 'Liberation Mono', monospace;
+  --font-sans: 'Inter Variable', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  /* Assistant prose reads in a text serif, like a printed page. */
+  --font-serif: 'Source Serif 4 Variable', Georgia, serif;
+  --font-mono: 'JetBrains Mono Variable', ui-monospace, 'SF Mono', Consolas, monospace;
 
   --ease: cubic-bezier(0.16, 1, 0.3, 1);
 
@@ -21,83 +24,106 @@
   --radius-sm: 0.375rem;
   --radius-md: 0.5rem;
   --radius-lg: 0.75rem;
-  --radius-xl: 1rem;
+  --radius-xl: 1.25rem;
   --radius-full: 9999px;
 
   --sidebar-w: 16.25rem;
-  --measure: 52rem;
+  --measure: 45rem;
 
-  --font-xs: clamp(0.6875rem, 0.66rem + 0.125vw, 0.75rem);
-  --font-sm: clamp(0.8125rem, 0.78rem + 0.15vw, 0.875rem);
-  --font-base: clamp(0.875rem, 0.85rem + 0.15vw, 0.9375rem);
+  --font-xs: 0.75rem;
+  --font-sm: 0.875rem;
+  --font-base: 0.9375rem;
   --font-md: 1rem;
-  --font-lg: clamp(1.125rem, 1rem + 0.5vw, 1.25rem);
+  --font-lg: 1.125rem;
+  --font-prose: 1.0625rem;
+
+  /* Mascot palette — identical in both themes so the character is stable. */
+  --mascot-body: #cc785c;
+  --mascot-shade: #a9583e;
+  --mascot-ink: #141413;
+  --mascot-cheek: #e8a55a;
 }
 
-/* --- Dark (default) --- */
-[data-theme="dark"] {
-  --bg-app: #111111;
-  --bg-sidebar: #161616;
-  --bg-main: #111111;
-  --bg-input: #1E1E1E;
-  --bg-input-focus: #242424;
-  --bg-code: #0D0D0D;
-  --bg-inline-code: #262626;
-  --bg-user-msg: #1E1E1E;
-  --bg-hover: rgba(255, 255, 255, 0.04);
-  --bg-active: rgba(255, 255, 255, 0.06);
-  --bg-settings: #161616;
-  --bg-overlay: rgba(0, 0, 0, 0.5);
-
-  --border: #262626;
-  --border-focus: #525252;
-
-  --text-1: #FAFAFA;
-  --text-2: #A1A1A1;
-  --text-3: #707070;
-  --text-inverse: #111111;
-
-  --accent: #6366F1;
-  --accent-hover: #818CF8;
-  --accent-subtle: rgba(99, 102, 241, 0.12);
-
-  --success: #4ADE80;
-  --error: #F87171;
-  --warning: #FBBF24;
-
-  color-scheme: dark;
-}
-
-/* --- Light --- */
+/* --- Light (cream) --- */
 [data-theme="light"] {
-  --bg-app: #FFFFFF;
-  --bg-sidebar: #F7F7F7;
-  --bg-main: #FFFFFF;
-  --bg-input: #F5F5F5;
-  --bg-input-focus: #EFEFEF;
-  --bg-code: #F5F5F5;
-  --bg-inline-code: #EAEAEA;
-  --bg-user-msg: #F0F0F0;
-  --bg-hover: rgba(0, 0, 0, 0.03);
-  --bg-active: rgba(0, 0, 0, 0.05);
-  --bg-settings: #FFFFFF;
-  --bg-overlay: rgba(0, 0, 0, 0.3);
+  --bg-app: #faf9f5;
+  --bg-sidebar: #f5f0e8;
+  --bg-main: #faf9f5;
+  --bg-input: #fffdf9;
+  --bg-input-focus: #fffdf9;
+  --bg-code: #181715;
+  --bg-code-bar: #252320;
+  --bg-inline-code: #efe9de;
+  --bg-user-msg: #efe9de;
+  --bg-hover: rgba(20, 20, 19, 0.045);
+  --bg-active: rgba(20, 20, 19, 0.075);
+  --bg-settings: #faf9f5;
+  --bg-overlay: rgba(20, 20, 19, 0.32);
+  --bg-body: #faf9f5;
 
-  --border: #E5E5E5;
-  --border-focus: #A3A3A3;
+  --border: #e6dfd8;
+  --border-focus: #cc785c;
 
-  --text-1: #171717;
-  --text-2: #525252;
-  --text-3: #A3A3A3;
-  --text-inverse: #FAFAFA;
+  --text-1: #141413;
+  --text-2: #57554f;
+  --text-3: #75726b;
+  --text-inverse: #fffdf9;
+  --text-code: #e8e4dc;
+  --text-code-muted: #a09d96;
 
-  --accent: #4F46E5;
-  --accent-hover: #6366F1;
-  --accent-subtle: rgba(79, 70, 229, 0.08);
+  --accent: #cc785c;
+  --accent-hover: #a9583e;
+  --accent-subtle: rgba(204, 120, 92, 0.16);
+  --accent-ink: #9a4f36;
 
-  --success: #22C55E;
-  --error: #EF4444;
-  --warning: #F59E0B;
+  --success: #3f9a56;
+  --error: #c64545;
+  --danger: #c64545;
+  --warning: #b8860b;
+
+  --shadow-pop: 0 10px 30px rgba(61, 45, 30, 0.14), 0 2px 6px rgba(61, 45, 30, 0.08);
 
   color-scheme: light;
+}
+
+/* --- Dark (warm night, from the system's dark product surfaces) --- */
+[data-theme="dark"] {
+  --bg-app: #1f1e1b;
+  --bg-sidebar: #181715;
+  --bg-main: #1f1e1b;
+  --bg-input: #2a2925;
+  --bg-input-focus: #2d2b27;
+  --bg-code: #161513;
+  --bg-code-bar: #2a2824;
+  --bg-inline-code: #33312c;
+  --bg-user-msg: #2f2d29;
+  --bg-hover: rgba(250, 249, 245, 0.05);
+  --bg-active: rgba(250, 249, 245, 0.085);
+  --bg-settings: #252320;
+  --bg-overlay: rgba(0, 0, 0, 0.5);
+  --bg-body: #1f1e1b;
+
+  --border: #36342f;
+  --border-focus: #d98b70;
+
+  --text-1: #faf9f5;
+  --text-2: #c2beb5;
+  --text-3: #9a968d;
+  --text-inverse: #1f1e1b;
+  --text-code: #e8e4dc;
+  --text-code-muted: #a09d96;
+
+  --accent: #d98b70;
+  --accent-hover: #e6a088;
+  --accent-subtle: rgba(217, 139, 112, 0.18);
+  --accent-ink: #e6a088;
+
+  --success: #5db872;
+  --error: #e06c6c;
+  --danger: #e06c6c;
+  --warning: #e8a55a;
+
+  --shadow-pop: 0 12px 32px rgba(0, 0, 0, 0.4), 0 2px 8px rgba(0, 0, 0, 0.24);
+
+  color-scheme: dark;
 }

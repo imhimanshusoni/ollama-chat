@@ -11,16 +11,38 @@ function shortModel(name: string): string {
   return name.split(':')[0] || name;
 }
 
-const THINK_LEVELS: { value: ThinkLevel; label: string }[] = [
-  { value: 'off', label: 'Off' },
-  { value: 'low', label: 'Low' },
-  { value: 'medium', label: 'Med' },
-  { value: 'high', label: 'High' },
+const THINK_LEVELS: { value: ThinkLevel; label: string; bars: number }[] = [
+  { value: 'off', label: 'Fast, no thinking', bars: 0 },
+  { value: 'low', label: 'Think a little', bars: 1 },
+  { value: 'medium', label: 'Think more', bars: 2 },
+  { value: 'high', label: 'Think hard', bars: 3 },
 ];
 
-// Compact chip label for the current thinking level.
-function thinkChipLabel(level: ThinkLevel): string {
-  return level === 'off' ? 'Fast' : `Think: ${THINK_LEVELS.find((l) => l.value === level)?.label}`;
+// A thinking level drawn as a glyph: a bolt for "off", 1–3 rising bars otherwise.
+function LevelGlyph({ bars }: { bars: number }) {
+  if (bars === 0) {
+    return (
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d="M13 2 4 14h7l-1 8 9-12h-7Z" />
+      </svg>
+    );
+  }
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" aria-hidden="true">
+      {[0, 1, 2].map((i) => (
+        <rect
+          key={i}
+          x={4 + i * 6.5}
+          y={15 - i * 5}
+          width="3.6"
+          height={6 + i * 5}
+          rx="1.4"
+          fill="currentColor"
+          opacity={i < bars ? 1 : 0.25}
+        />
+      ))}
+    </svg>
+  );
 }
 
 export function ComposerControls() {
@@ -40,6 +62,8 @@ export function ComposerControls() {
   const thinkLevel = useChatStore((s) => s.conversations.find((c) => c.id === s.activeId)?.thinkLevel ?? 'off');
   const setThinkLevel = useChatStore((s) => s.setThinkLevel);
 
+  const level = THINK_LEVELS.find((l) => l.value === thinkLevel) ?? THINK_LEVELS[0];
+
   const pickModel = useCallback((m: string) => {
     setCurrentModel(m);
     void warmModel(baseUrl, m);
@@ -50,9 +74,8 @@ export function ComposerControls() {
     <div className={styles.root} ref={rootRef}>
       {open && (
         <div className={styles.popover} role="menu">
-          <div className={styles.sectionLabel}>Model</div>
           {models.length === 0 ? (
-            <p className={styles.empty}>Connect in settings to load models.</p>
+            <p className={styles.empty}>No models — connect first.</p>
           ) : (
             <ul className={styles.modelList}>
               {models.map((m) => {
@@ -81,28 +104,24 @@ export function ComposerControls() {
 
           <div className={styles.divider} />
 
-          <div className={styles.thinkRow}>
-            <div className={styles.reasoningText}>
-              <span className={styles.reasoningTitle}>Thinking</span>
-              <span className={styles.reasoningHint}>Higher thinks more. Slower, more thorough.</span>
-            </div>
-            <div className={styles.segments} role="radiogroup" aria-label="Thinking level">
-              {THINK_LEVELS.map(({ value, label }) => {
-                const active = value === thinkLevel;
-                return (
-                  <button
-                    key={value}
-                    type="button"
-                    role="radio"
-                    aria-checked={active}
-                    className={`${styles.segment} ${active ? styles.segmentActive : ''}`}
-                    onClick={() => { if (activeId) setThinkLevel(activeId, value); }}
-                  >
-                    {label}
-                  </button>
-                );
-              })}
-            </div>
+          <div className={styles.segments} role="radiogroup" aria-label="Thinking level">
+            {THINK_LEVELS.map(({ value, label, bars }) => {
+              const active = value === thinkLevel;
+              return (
+                <button
+                  key={value}
+                  type="button"
+                  role="radio"
+                  aria-checked={active}
+                  aria-label={label}
+                  title={label}
+                  className={`${styles.segment} ${active ? styles.segmentActive : ''}`}
+                  onClick={() => { if (activeId) setThinkLevel(activeId, value); }}
+                >
+                  <LevelGlyph bars={bars} />
+                </button>
+              );
+            })}
           </div>
         </div>
       )}
@@ -113,11 +132,12 @@ export function ComposerControls() {
         onClick={() => setOpen((o) => !o)}
         aria-haspopup="menu"
         aria-expanded={open}
+        aria-label={`Model ${currentModel || 'none'}, ${level.label}`}
+        title={`${currentModel || 'No model'} · ${level.label}`}
       >
-        <span className={styles.chipModel}>{currentModel ? shortModel(currentModel) : 'No model'}</span>
-        <span className={styles.chipSep} aria-hidden="true">·</span>
+        <span className={styles.chipModel}>{currentModel ? shortModel(currentModel) : '—'}</span>
         <span className={thinkLevel !== 'off' ? styles.chipModeOn : styles.chipMode}>
-          {thinkChipLabel(thinkLevel)}
+          <LevelGlyph bars={level.bars} />
         </span>
         <svg className={`${styles.chevron} ${open ? styles.chevronUp : ''}`} width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
           <polyline points="6 9 12 15 18 9" />
