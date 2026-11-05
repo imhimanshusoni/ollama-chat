@@ -1,6 +1,6 @@
 # Ollama Chat
 
-A fast, lightweight chat interface for self-hosted LLMs via [Ollama](https://ollama.com). Built as a daily-driver replacement for ChatGPT and Claude when running local or cloud-hosted open-source models. Pair it with Ollama on a free Google Colab T4 GPU and a Cloudflare tunnel for a zero-cost, private AI chat experience.
+A fast, lightweight chat interface for self-hosted LLMs via [Ollama](https://ollama.com). Built as a daily-driver replacement for ChatGPT and Claude when running local or cloud-hosted open-source models. Pair it with Ollama on a free Kaggle or Colab GPU and an ngrok (or Cloudflare) tunnel for a zero-cost, private AI chat experience.
 
 ## Features
 
@@ -91,25 +91,30 @@ npm run preview
 ### Connecting to Ollama
 
 1. Open the app and click the **Settings** icon (gear) in the top bar or sidebar footer.
-2. Enter your Ollama server URL (e.g., `http://localhost:11434` or a Cloudflare tunnel URL).
+2. Enter your Ollama server URL (e.g., `http://localhost:11434`, an ngrok URL, or a Cloudflare tunnel URL).
 3. Click **Connect**. The panel will display the connection status and list available models.
 4. Select a model from the dropdown.
 
 The URL and selected model are persisted -- on reload the app shows a "Connecting…" state while it reconnects, and surfaces an error banner with recovery actions if the server can't be reached.
 
-### Running Ollama on Google Colab (Free T4 GPU)
+### Running Ollama on Kaggle or Colab (free GPU)
 
-For users without a local GPU, Ollama can run on Google Colab's free T4 tier and be exposed via Cloudflare tunnel:
+For users without a local GPU, Ollama can run on a free Kaggle (2×T4) or Colab (T4) GPU and be exposed through a tunnel:
 
-1. Start a Colab notebook with a T4 GPU runtime.
-2. Install and start Ollama, then pull your desired model (e.g., `gemma3:12b`).
-3. Use `cloudflared` to create a tunnel exposing Ollama's port:
+1. Start a notebook with a GPU runtime, install and start Ollama, then pull your model.
+2. Expose Ollama's port with **ngrok** (recommended — it streams reliably):
    ```bash
-   cloudflared tunnel --url http://localhost:11434
+   ngrok http 11434 --host-header=localhost:11434
    ```
-4. Copy the generated `*.trycloudflare.com` URL into the app's Settings panel.
+   or with a Cloudflare quick tunnel (no account, but streams can be cut on long replies):
+   ```bash
+   cloudflared tunnel --url http://localhost:11434 --http-host-header localhost:11434
+   ```
+3. Put the tunnel URL in `config/model-url.txt` (the app auto-syncs it from GitHub) or paste it into Settings.
 
-Note: The Cloudflare tunnel URL changes each time you restart the Colab session. Update the URL in Settings accordingly.
+**ngrok and the browser:** ngrok's free tier shows browsers a warning page unless requests carry an `ngrok-skip-browser-warning` header, which Ollama's CORS rules don't allow. The deployed app therefore sends ngrok requests through a same-origin Vercel Function (`api/ollama.ts`) that adds the header and streams the reply back. Cloudflare and localhost URLs are fetched directly. Limits of the proxy: 300s per request and 4.5 MB request bodies (Vercel). `npm run dev` has no `/api` route, so use `vercel dev` or a non-ngrok URL locally.
+
+Note: tunnel URLs change each time the notebook restarts — update `config/model-url.txt` or Settings.
 
 ## Deployment
 

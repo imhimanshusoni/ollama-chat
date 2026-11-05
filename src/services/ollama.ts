@@ -28,8 +28,8 @@ export function isGemma4(model: string): boolean {
 }
 const GEMMA4_SAMPLING = { temperature: 1.0, top_p: 0.95, top_k: 64 };
 
-// A stale trycloudflare.com hostname can resolve but never respond, hanging a
-// fetch forever. Bound how long we wait to establish a connection; streaming
+// A stale tunnel hostname (trycloudflare.com / ngrok) can resolve but never
+// respond, hanging a fetch forever. Bound how long we wait to establish a connection; streaming
 // bodies are exempt (the timeout covers connection + headers only).
 export const CONNECT_TIMEOUT_MS = 10_000;
 
@@ -44,11 +44,50 @@ const META_TIMEOUT_MS = 120_000;
 // black-holed tunnel — the user can always hit Stop sooner.
 const STREAM_FIRST_BYTE_TIMEOUT_MS = 180_000;
 
+// ngrok's free tier serves an HTML warning page to browser requests unless they
+// send `ngrok-skip-browser-warning`, and Ollama's CORS preflight rejects that
+// header — so ngrok tunnels are reached through the same-origin Vercel Function
+// in api/ollama.ts, which adds it server-side. Other hosts (trycloudflare,
+// localhost, LAN) are fetched directly as before. `npm run dev` has no /api
+// route, so the proxy is only used in built (Vercel) deployments.
+const NGROK_SUFFIXES = ['.ngrok-free.dev', '.ngrok-free.app', '.ngrok.app', '.ngrok.dev'];
+const PROXY_ENDPOINT = '/api/ollama';
+
+export function shouldProxy(baseUrl: string): boolean {
+  if (import.meta.env.DEV) return false;
+  try {
+    const host = new URL(baseUrl).hostname.toLowerCase();
+    return NGROK_SUFFIXES.some((s) => host.endsWith(s));
+  } catch {
+    return false;
+  }
+}
+
+function ollamaFetch(baseUrl: string, path: string, init: RequestInit = {}): Promise<Response> {
+  if (!shouldProxy(baseUrl)) return fetch(baseUrl + path, init);
+  // The proxy only accepts https targets; ngrok always serves https.
+  const target = new URL(baseUrl);
+  target.protocol = 'https:';
+  return fetch(`${PROXY_ENDPOINT}?path=${encodeURIComponent(path)}`, {
+    ...init,
+    headers: { ...(init.headers as Record<string, string> | undefined), 'x-ollama-target': target.origin },
+  });
+}
+
+// Vercel Functions cap request bodies at 4.5 MB; conversations carrying several
+// images can exceed it when going through the proxy.
+function httpError(status: number): Error {
+  if (status === 413) {
+    return new Error('Request too large for the proxy (4.5 MB limit) — remove some images from the conversation');
+  }
+  return new Error('HTTP ' + status);
+}
+
 export async function fetchModels(baseUrl: string): Promise<string[]> {
-  const resp = await fetch(baseUrl + '/api/tags', {
+  const resp = await ollamaFetch(baseUrl, '/api/tags', {
     signal: AbortSignal.timeout(CONNECT_TIMEOUT_MS),
   });
-  if (!resp.ok) throw new Error('HTTP ' + resp.status);
+  if (!resp.ok) throw httpError(resp.status);
   const data = await resp.json();
   return (data.models || []).map((m: { name: string }) => m.name);
 }
@@ -121,7 +160,7 @@ export async function embedTexts(
 
   // A network-level failure propagates as-is, so the caller can distinguish it
   // from EmbedModelMissingError (which is only thrown on an explicit 404).
-  const resp = await fetch(baseUrl + '/api/embed', {
+  const resp = await ollamaFetch(baseUrl, '/api/embed', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ model, input, keep_alive: KEEP_ALIVE, truncate: true }),
@@ -142,7 +181,7 @@ export async function embedTexts(
     if (resp.status === 404 || /not found/i.test(bodyText)) {
       throw new EmbedModelMissingError(model);
     }
-    throw new Error('HTTP ' + resp.status);
+    throw httpError(resp.status);
   }
 
   const data: { embeddings?: number[][] } = await resp.json();
@@ -163,7 +202,7 @@ export async function embedTexts(
 export async function warmModel(baseUrl: string, model: string): Promise<void> {
   if (!baseUrl || !model) return;
   try {
-    await fetch(baseUrl + '/api/chat', {
+    await ollamaFetch(baseUrl, '/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       // Match streamChatRaw's num_ctx so warm-up loads the model at the same
@@ -191,7 +230,7 @@ export async function generateOnce(
   messages: OllamaMessage[],
   opts?: { numPredict?: number; signal?: AbortSignal }
 ): Promise<{ content: string; promptEvalCount?: number; evalCount?: number }> {
-  const resp = await fetch(baseUrl + '/api/chat', {
+  const resp = await ollamaFetch(baseUrl, '/api/chat', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -211,7 +250,7 @@ export async function generateOnce(
       ? AbortSignal.any([opts.signal, AbortSignal.timeout(META_TIMEOUT_MS)])
       : AbortSignal.timeout(META_TIMEOUT_MS),
   });
-  if (!resp.ok) throw new Error('HTTP ' + resp.status);
+  if (!resp.ok) throw httpError(resp.status);
   const data: OllamaChatChunk = await resp.json();
   return {
     content: data.message?.content ?? '',
@@ -252,7 +291,7 @@ export async function* streamChatRaw(
 
   let resp: Response;
   try {
-    resp = await fetch(baseUrl + '/api/chat', {
+    resp = await ollamaFetch(baseUrl, '/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -273,12 +312,13 @@ export async function* streamChatRaw(
     clearTimeout(timer);
   }
 
-  if (!resp.ok) throw new Error('HTTP ' + resp.status);
+  if (!resp.ok) throw httpError(resp.status);
 
   if (!resp.body) throw new Error('Empty response body');
   const reader = resp.body.getReader();
   const decoder = new TextDecoder();
   let buffer = '';
+  let sawDone = false;
 
   const emit = function* (line: string) {
     if (!line.trim()) return;
@@ -291,6 +331,7 @@ export async function* streamChatRaw(
     const content = j.message?.content;
     const thinking = j.message?.thinking;
     const toolCalls = j.message?.tool_calls;
+    if (j.done) sawDone = true;
     if (content || thinking || (toolCalls && toolCalls.length) || j.done) {
       if (j.done && j.done_reason === 'length') {
         // The reply hit the context ceiling mid-generation. If this shows up,
@@ -325,6 +366,14 @@ export async function* streamChatRaw(
 
     if (buffer.trim()) {
       yield* emit(buffer);
+    }
+
+    // Ollama always ends a stream with a `done: true` chunk. A body that closes
+    // without one was cut off in transit — e.g. the proxy hit Vercel's 300s
+    // function limit or the tunnel dropped — so surface it instead of showing a
+    // silently truncated reply.
+    if (!sawDone) {
+      throw new Error('Reply was cut off before it finished (tunnel or proxy time limit) — try again');
     }
   } finally {
     reader.releaseLock();

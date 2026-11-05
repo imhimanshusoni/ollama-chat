@@ -172,7 +172,7 @@ export function SettingsPanel() {
               onKeyDown={(e) => { if (e.key === 'Enter') void handleConnect(); }}
               onFocus={() => { inputFocusedRef.current = true; }}
               onBlur={() => { inputFocusedRef.current = false; }}
-              placeholder="https://…trycloudflare.com"
+              placeholder="https://…ngrok-free.dev"
               spellCheck={false}
               autoComplete="off"
             />

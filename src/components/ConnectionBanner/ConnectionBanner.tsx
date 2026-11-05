@@ -96,7 +96,7 @@ export function ConnectionBanner() {
             onKeyDown={(e) => {
               if (e.key === 'Enter') handleManualConnect();
             }}
-            placeholder="https://…trycloudflare.com"
+            placeholder="https://…ngrok-free.dev"
             aria-label="Server URL"
             spellCheck={false}
             autoComplete="off"
